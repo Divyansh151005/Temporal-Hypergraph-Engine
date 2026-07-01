@@ -1,0 +1,31 @@
+/target
+**/*.rs.bk
+*.wal
+*.ckpt
+.DS_Store
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+
+# Node
+node_modules/
+dist/
+
+# Local engine data
+/data/
+
+# Evaluation and benchmark outputs
+/results/
+/logs/
+.cache/
+
+# Local secrets
+.env
+
+# Personal notes and third-party papers
+docs/MyUnderstanding/
+Research Papers/
