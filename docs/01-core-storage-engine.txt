@@ -1,0 +1,275 @@
+# ==============================================================================
+
+# DOCUMENT SPECIFICATION: docs/01-core-storage-engine.txt
+
+# ENGINE MODULE: Temporal Hypergraph Engine Core Storage & In-Memory Graph
+
+# LANGUAGE/TARGET: Rust (Edition 2021)
+
+# ==============================================================================
+
+[SYSTEM ROLE FOR AGENT]
+You are an expert Rust Systems Architect. Implement the low-level in-memory storage engine, bipartite graph data structures, write-ahead log (WAL), and concurrent read/write mechanisms described in this document. Follow all safety, concurrency, and memory layout constraints strictly.
+
+---
+
+1. ARCHITECTURAL OVERVIEW
+
+---
+
+The Temporal Hypergraph Storage Engine is a high-throughput, low-latency, in-memory graph engine designed for real-time LLM memory retrieval and KV-cache offloading.
+
+Traditional graph structures rely on pointer-heavy node objects (e.g., `Arc<RwLock<Node>>`), which cause extreme CPU cache missing, pointer chasing, and heap fragmentation. Instead, this engine represents hypergraphs mathematically as a Bipartite Graph stored in dense, contiguous memory arenas:
+
+Set A: Atomic Nodes (Entities/Tokens)
+Set B: Hyperedges (N-ary Relationship Contexts)
+
+Key Architectural Pillars:
+
+1. Zero Pointer-Chasing: Relationships are stored as compact 32-bit/64-bit integer index arrays (`NodeId` <-> `HyperedgeId`), optimizing L1/L2/L3 cache utilization.
+2. High Concurrency: Read-heavy multi-threaded graph traversals operate lock-free concurrently alongside non-blocking streaming writes.
+3. Durable Persistence: State mutations write to a sequential Write-Ahead Log (WAL) using memory-mapped files before updating the in-memory graph index.
+
+---
+
+2. RUST MEMORY STRUCTURES & ARENA LAYOUT
+
+---
+
+To eliminate heap fragmentation, nodes and hyperedges are stored in generational index arenas (`generational-arena` design pattern).
+
+2.1 Compact Identifiers
+
+```rust
+#[repr(C, packed)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct NodeId {
+    pub index: u32,
+    pub generation: u32,
+}
+
+#[repr(C, packed)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct HyperedgeId {
+    pub index: u32,
+    pub generation: u32,
+}
+
+```
+
+2.2 Core Node & Hyperedge Structs
+
+Memory structures must be cache-aligned (`#[repr(C)]`) to prevent false sharing across threads.
+
+```rust
+use chrono::{DateTime, Utc};
+use smallvec::SmallVec;
+
+/// Represents an atomic entity, concept, or token sequence in Set A.
+#[repr(C)]
+pub struct TemporalNode {
+    pub id: NodeId,
+    pub label_hash: u64,                  // Hash of canonical entity label
+    pub created_at: i64,                  // Unix epoch in seconds
+    pub hyperedges: SmallVec<[HyperedgeId; 8]>, // Inlined stack allocation for up to 8 incident hyperedges
+}
+
+/// Represents an N-ary relation binding N nodes in Set B.
+#[repr(C)]
+pub struct TemporalHyperedge {
+    pub id: HyperedgeId,
+    pub event_type_hash: u64,              // Hash of the event type string
+    pub participants: SmallVec<[NodeId; 6]>, // Inlined N-ary node bindings
+    pub valid_from: i64,                  // Unix timestamp (start of validity)
+    pub valid_to: Option<i64>,            // Unix timestamp (end of validity, None if ongoing)
+    pub is_ongoing: bool,                 // Active status flag
+    pub decay_weight: f32,                // Dynamic decay score [0.0, 1.0]
+    pub embedding_offset: u64,            // Pointer offset into contiguous vector buffer
+}
+
+```
+
+2.3 Contiguous Bipartite Graph Storage
+
+```rust
+pub struct BipartiteArena {
+    pub nodes: Vec<Option<TemporalNode>>,
+    pub hyperedges: Vec<Option<TemporalHyperedge>>,
+    pub free_nodes: Vec<u32>,
+    pub free_hyperedges: Vec<u32>,
+}
+
+```
+
+---
+
+3. CONCURRENCY & LOCK-FREE ACCESS PATTERNS
+
+---
+
+The engine must support multi-threaded concurrent graph traversals (read path) while simultaneously processing incoming hyperedges (write path).
+
+3.1 Lock-Free Read Indexes
+
+* Use `dashmap::DashMap` for external ID lookup (e.g., String Label -> `NodeId`).
+* Use `crossbeam_skiplist::SkipMap` for temporal index range queries (`valid_from` -> `HyperedgeId`).
+* Core graph traversals read directly from atomic vector slots or Atomic pointers using Read-Copy-Update (RCU) paradigms via `arc-swap`.
+
+3.2 Concurrency Architecture Code Pattern
+
+```rust
+use std::sync::atomic::{AtomicU32, Ordering};
+use dashmap::DashMap;
+use crossbeam_skiplist::SkipMap;
+use arc_swap::ArcSwap;
+use std::sync::Arc;
+
+pub struct ConcurrentHypergraphEngine {
+    // Label index mapping hash(label) -> NodeId
+    pub node_index: DashMap<u64, NodeId>,
+    
+    // Temporal range index sorting hyperedges chronologically
+    pub temporal_index: SkipMap<i64, HyperedgeId>,
+    
+    // Read-Optimized Atomic Snapshot of Bipartite Arenas
+    pub graph_snapshot: ArcSwap<BipartiteArena>,
+    
+    // Atomic counters
+    pub active_nodes_count: AtomicU32,
+    pub active_hyperedges_count: AtomicU32,
+}
+
+```
+
+3.3 Non-Blocking Write Batching
+
+* Writes must NOT lock the reading threads.
+* Ingestion worker threads queue incoming hyperedges into a lock-free ring buffer (`crossbeam_channel::bounded`).
+* A background flush worker batches updates, appends to the WAL, builds a new immutable epoch slice, and atomically swaps `graph_snapshot` using `ArcSwap::store()`.
+
+---
+
+4. WRITE-AHEAD LOG (WAL) & PERSISTENCE
+
+---
+
+To guarantee durability without slowing down memory execution, all state operations pass through a binary Write-Ahead Log backed by memory-mapped files (`memmap2`).
+
+4.1 Binary Frame Header Specification
+
+Every WAL record begins with a fixed 24-byte header:
+
++-------------------+-------------------+-------------------+-------------------+
+| Magic Bytes (4B)  | OpCode (2B)       | Payload Len (4B)  | Sequence ID (8B)  |
+| "THG1" (0x54484731| 0x0001 = Insert   | Size in bytes     | Monotonic Counter |
++-------------------+-------------------+-------------------+-------------------+
+| CRC32 Checksum(4B)| Reserved (2B)     |
++-------------------+-------------------+
+
+4.2 WAL Frame Layout Code
+
+```rust
+#[repr(C, packed)]
+pub struct WalFrameHeader {
+    pub magic: [u8; 4],     // b"THG1"
+    pub op_code: u16,       // 1 = InsertNode, 2 = InsertHyperedge, 3 = SoftDelete
+    pub payload_len: u32,   // Byte length of payload
+    pub sequence_id: u64,   // Monotonic frame index
+    pub crc32: u32,         // Payload integrity checksum
+    pub reserved: u16,      // Alignment padding
+}
+
+```
+
+4.3 Crash Recovery Protocol (WAL Replay)
+Upon startup:
+
+1. Open the latest checkpoint snapshot from disk.
+2. Locate the active `.wal` file.
+3. Memory-map the `.wal` file into memory via `memmap2::MmapOptions`.
+4. Sequentially scan WAL frames from sequence ID > checkpoint sequence ID.
+5. Verify CRC32 checksums for each frame.
+6. Replay mutations in-memory to reconstruct `BipartiteArena` and index state.
+7. Truncate corrupted trailing frames if an ungraceful shutdown occurred mid-write.
+
+---
+
+5. CORE CRATE INTERFACE & PUBLIC API
+
+---
+
+```rust
+impl ConcurrentHypergraphEngine {
+    /// Creates or restores a hypergraph engine from a storage directory.
+    pub fn open(storage_path: &str) -> Result<Self, EngineError>;
+
+    /// Inserts an N-ary hyperedge, updating nodes, index maps, and WAL atomically.
+    pub fn insert_hyperedge(
+        &self, 
+        event_type: &str, 
+        node_labels: &[&str], 
+        valid_from: i64, 
+        valid_to: Option<i64>
+    ) -> Result<HyperedgeId, EngineError>;
+
+    /// Executes a k-hop temporal traversal starting from seed nodes.
+    pub fn traverse_bipartite(
+        &self, 
+        start_nodes: &[NodeId], 
+        k_hops: usize, 
+        as_of_timestamp: i64
+    ) -> Vec<TemporalHyperedge>;
+
+    /// Flushes in-memory indexes and triggers a checkpoint to disk.
+    pub fn checkpoint(&self) -> Result<(), EngineError>;
+}
+
+```
+
+---
+
+6. BENCHMARKING, VALIDATION & VICTORY POINTS
+
+---
+
+6.1 Performance Benchmarks & Targets
+
++-------------------------------------+--------------------+--------------------+
+| Metric                              | Maximum Threshold  | Target Objective   |
++-------------------------------------+--------------------+--------------------+
+| 3-Hop N-ary Traversal (1M Edges)     | < 2.0 ms           | < 0.8 ms           |
+| Concurrent Write Throughput          | > 50,000 ops/sec   | > 120,000 ops/sec  |
+| Memory Usage per Hyperedge          | < 128 bytes        | < 64 bytes         |
+| WAL Flush Latency (p99)             | < 1.0 ms           | < 0.3 ms           |
++-------------------------------------+--------------------+--------------------+
+
+6.2 Validation & Quality Assurance Test Suite
+
+1. Memory Safety Validation:
+* Run `cargo miri test` to verify zero Undefined Behavior (UB), correct pointer aliasing, and valid byte alignments.
+* Run Valgrind/Memcheck on full execution binaries to guarantee zero memory leaks over 10,000,000 insert/delete iterations.
+
+
+2. Concurrency Fuzzing:
+* Run `cargo loom` on core lock-free traversal pipelines to test all possible thread interleavings and memory ordering fences (`Acquire`/`Release`).
+
+
+3. Crash Recovery Integration Test:
+* Spawn a producer process inserting 500,000 hyperedges.
+* Send `SIGKILL` mid-write at iteration 250,000.
+* Re-open the engine state and verify that zero non-corrupted committed frames were lost, and uncommitted trailing frames were safely discarded.
+
+
+
+---
+
+7. END CHECKLIST & VICTORY CRITERIA
+
+---
+
+[ ] `TemporalNode` and `TemporalHyperedge` structs are cache-aligned (`repr(C)`).
+[ ] Arena indexing eliminates all raw pointer references between nodes and edges.
+[ ] `ArcSwap` and `DashMap` enable 64+ concurrent reader threads without blocking.
+[ ] WAL binary protocol guarantees zero payload corruption via CRC32 verification.
+[ ] All unit tests pass under `cargo miri test`.
+[ ] Benchmark suite proves 3-hop traversal latency across 1,000,000 hyperedges is under 2.0 milliseconds.
