@@ -1,0 +1,187 @@
+# ==============================================================================
+
+# DOCUMENT SPECIFICATION: docs/02-temporal-decay-math.txt
+
+# ENGINE MODULE: Temporal Math, SIMD Decay, and Conflict Resolution
+
+# LANGUAGE/TARGET: Rust (Edition 2021) + AVX2/AVX-512 SIMD
+
+# ==============================================================================
+
+[SYSTEM ROLE FOR AGENT]
+You are an expert Applied Mathematician and Rust Performance Engineer. Implement the time-aware mathematics, vectorized SIMD exponential decay functions, and deterministic temporal conflict resolution logic. Your code will dictate how the LLM "forgets" stale context and prioritizes recent/relevant facts.
+
+---
+
+1. MATHEMATICAL FOUNDATION: TIME & DECAY
+
+---
+
+Standard vector similarity only measures semantic closeness. This engine multiplies semantic similarity by a Temporal Decay Score to rank hyperedges.
+
+1.1 Continuous Exponential Decay
+Every hyperedge has a time-decay weight $w(t)$.
+Formula: w(t) = w_0 * exp(-\lambda * \Delta t)
+
+Where:
+
+* w_0 = Base extraction confidence (usually 1.0).
+* \Delta t = (t_current - t_edge_valid_from) in DAYS.
+* \lambda = Decay constant, calculated via desired half-life: \lambda = ln(2) / t_{half-life}
+
+1.2 Fourier Time Encoding (Periodic Context)
+To allow the LLM to understand cyclical events (e.g., "Q3 Earnings" or "Every Monday"), the engine must generate a time embedding vector added to the semantic embedding.
+Formula for time vector component `i`:
+
+* TE(t, 2i) = sin( t / (10000^(2i/d)) )
+* TE(t, 2i+1) = cos( t / (10000^(2i/d)) )
+*(Implementation identical to standard positional encoding, but applied to epoch timestamps scaled to hours/days).*
+
+---
+
+2. SIMD ACCELERATION BLUEPRINT (RUST)
+
+---
+
+Calculating `exp()` for 1,000,000 hyperedges sequentially will cause unacceptable latency. The agent MUST implement vectorized calculations using `std::arch::x86_64` (AVX2/FMA) or `std::simd` (portable SIMD).
+
+2.1 Data Packing Strategy
+To use SIMD, timestamp deltas must be packed into contiguous arrays of `f32`.
+
+1. Convert `i64` epoch timestamps to `f32` (representing "days ago").
+2. Load 8 `f32` values at a time into a 256-bit AVX register (`__m256`).
+
+2.2 Vectorized Decay Implementation
+Standard Rust `f32::exp()` does not auto-vectorize well. Implement a fast-math polynomial approximation of `exp(x)` for AVX2, or use the `sleef-sys` crate / `wide` crate for vectorized transcendentals.
+
+Code Pattern Blueprint (using `wide` crate for cross-platform SIMD):
+
+```rust
+use wide::f32x8;
+
+pub fn compute_decay_scores_simd(
+    deltas_in_days: &[f32], 
+    lambda: f32, 
+    out_scores: &mut [f32]
+) {
+    let lambda_vec = f32x8::splat(-lambda);
+    
+    // Process 8 floats per instruction cycle
+    let chunks = deltas_in_days.chunks_exact(8);
+    let out_chunks = out_scores.chunks_exact_mut(8);
+    
+    for (chunk, out_chunk) in chunks.zip(out_chunks) {
+        let delta_vec = f32x8::from(chunk);
+        // Multiply by -lambda
+        let exponent = delta_vec * lambda_vec;
+        
+        // Compute exp() using wide's vectorized math
+        let decay = exponent.exp(); 
+        
+        decay.copy_to_slice(out_chunk);
+    }
+    
+    // Handle remaining elements (remainder < 8) sequentially...
+}
+
+```
+
+---
+
+3. TEMPORAL CONFLICT RESOLUTION MATRIX
+
+---
+
+When the extraction engine pushes a new fact that contradicts an old fact, the database must resolve it deterministically using the Bipartite Graph links.
+
+Scenario:
+Edge 1 (Old): "Sam is CEO of OpenAI" (valid_from: 2023, valid_to: None)
+Edge 2 (New): "Mira is CEO of OpenAI" (valid_from: 2025, valid_to: None)
+
+3.1 The Conflict Resolution Tree
+When a new hyperedge `H_new` is inserted:
+
+1. Lookup all existing hyperedges connected to the EXACT same participant nodes with the EXACT same semantic event_type.
+2. If an existing `H_old` has `valid_to == None` AND `H_new.valid_from > H_old.valid_from`:
+-> Action: Trigger "Temporal Truncation".
+-> Execute WAL Update: Set `H_old.valid_to = H_new.valid_from`. Set `H_old.is_ongoing = false`.
+3. If `H_new.valid_from < H_old.valid_from` (Backfilling historical data):
+-> Action: "Historical Insert".
+-> Execute WAL Update: Set `H_new.valid_to = H_old.valid_from`.
+4. If identical timestamps:
+-> Action: Merge aliases / Drop as duplicate if embeddings match > 0.98 cosine similarity.
+
+*Crucial Architecture Note:* NEVER delete `H_old`. LLMs need historical state to answer questions like "Who was CEO *before* Mira?". We only truncate the `valid_to` boundary.
+
+---
+
+4. CORE CRATE INTERFACE & PUBLIC API
+
+---
+
+```rust
+pub mod temporal {
+    pub struct DecayConfig {
+        pub half_life_days: f32,
+        pub base_weight: f32,
+    }
+
+    /// SIMD-accelerated batch calculation of time decay
+    pub fn batch_compute_decay(
+        current_time: i64, 
+        edge_timestamps: &[i64], 
+        config: &DecayConfig,
+        out_scores: &mut [f32]
+    );
+
+    /// Checks for temporal overlaps and returns WAL mutation commands
+    pub fn resolve_conflicts(
+        new_edge: &TemporalHyperedge,
+        existing_edges: &[&TemporalHyperedge]
+    ) -> Vec<WalMutationCommand>;
+}
+
+```
+
+---
+
+5. BENCHMARKING, VALIDATION & VICTORY POINTS
+
+---
+
+5.1 Performance Benchmarks & Targets
+
++-------------------------------------+--------------------+--------------------+
+| Metric                              | Maximum Threshold  | Target Objective   |
++-------------------------------------+--------------------+--------------------+
+| Batch Decay Calc (1,000,000 edges)  | < 2.0 ms           | < 0.5 ms (SIMD)    |
+| Conflict Resolution (per insert)    | < 0.5 ms           | < 0.1 ms           |
+| Float Precision Error (SIMD exp)    | < 1e-4             | < 1e-6             |
++-------------------------------------+--------------------+--------------------+
+
+5.2 Validation & Quality Assurance Test Suite
+
+1. SIMD Math Accuracy:
+* Generate an array of 10,000 random timestamp deltas.
+* Compute `std::f32::exp()` sequentially.
+* Compute using the SIMD `batch_compute_decay()`.
+* Assert `(simd_val - std_val).abs() < 1e-5` for all elements.
+
+
+2. Truncation Boundary Tests:
+* Insert chronologically out-of-order events (e.g., Year 2025, then Year 2023, then Year 2024).
+* Assert that the final state forms a perfectly contiguous, non-overlapping timeline sequence where `edge[n].valid_to == edge[n+1].valid_from`.
+
+
+
+---
+
+6. END CHECKLIST & VICTORY CRITERIA
+
+---
+
+[ ] Fast-math `exp()` approximation is successfully vectorized using `f32x8` (AVX2).
+[ ] Fallback sequential code is provided for non-x86/ARM architectures.
+[ ] Conflict resolution correctly mutates historical `valid_to` bounds without deleting nodes.
+[ ] Time embedding generator correctly outputs Fourier embeddings matching positional encoding math.
+[ ] SIMD benchmarks show a minimum of 4x speedup over standard sequential iterators.
