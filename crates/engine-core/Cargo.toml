@@ -1,0 +1,42 @@
+[package]
+name = "engine-core"
+description = "Bipartite-arena temporal hypergraph storage engine with WAL durability and lock-free reads"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+temporal-math.workspace = true
+arc-swap.workspace = true
+bytemuck.workspace = true
+crc32fast.workspace = true
+crossbeam-channel.workspace = true
+crossbeam-skiplist.workspace = true
+dashmap.workspace = true
+memmap2.workspace = true
+parking_lot.workspace = true
+smallvec.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+[target.'cfg(loom)'.dependencies]
+loom.workspace = true
+
+[dev-dependencies]
+criterion.workspace = true
+proptest.workspace = true
+rand.workspace = true
+tempfile.workspace = true
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(loom)"] }
+
+[[bench]]
+name = "traversal"
+harness = false
+
+[[bench]]
+name = "ingest"
+harness = false
