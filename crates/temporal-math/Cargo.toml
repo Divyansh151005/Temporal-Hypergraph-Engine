@@ -1,0 +1,26 @@
+[package]
+name = "temporal-math"
+description = "Time-decay scoring, Fourier time encodings and temporal conflict resolution for the Temporal Hypergraph Engine"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[features]
+default = []
+# Forces the portable scalar decay path (useful for debugging or exotic targets).
+scalar-fallback = []
+
+[dependencies]
+bytemuck.workspace = true
+wide.workspace = true
+
+[dev-dependencies]
+criterion.workspace = true
+proptest.workspace = true
+rand.workspace = true
+
+[[bench]]
+name = "decay"
+harness = false
