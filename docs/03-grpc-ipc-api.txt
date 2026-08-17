@@ -1,0 +1,303 @@
+```text
+# ==============================================================================
+# DOCUMENT SPECIFICATION: docs/03-grpc-ipc-api.txt
+# ENGINE MODULE: High-Throughput gRPC, Protobuf Schema, and PyO3 C-FFI Bridge
+# LANGUAGE/TARGET: Rust (Tonic/PyO3) + Python (gRPC/Ctypes)
+# ==============================================================================
+
+[SYSTEM ROLE FOR AGENT]
+You are an expert Systems & Protocol Infrastructure Engineer. Implement the high-performance gRPC IPC streaming protocol, zero-copy buffer abstractions, and direct in-process PyO3 C-FFI Python bindings described in this document. Follow all wire-format specs, memory alignment constraints, and concurrency rules strictly.
+
+--------------------------------------------------------------------------------
+1. ARCHITECTURAL OVERVIEW
+--------------------------------------------------------------------------------
+
+The Temporal Hypergraph Engine relies on a dual-path IPC/FFI architecture to support both distributed remote environments and high-efficiency local micro-benchmarks:
+
+1. Remote / Distributed Path (gRPC via Tonic):
+   - Transport: HTTP/2 over TCP / UNIX Domain Sockets (UDS).
+   - Serialization: Protocol Buffers v3 with streaming payloads.
+   - Purpose: Multi-tenant SaaS deployments, vLLM secondary storage nodes, and microservice clusters.
+
+2. In-Process / Zero-Copy Path (PyO3 C-FFI Direct Bindings):
+   - Transport: Direct C-FFI / Shared Process Memory.
+   - Serialization: Zero-copy pointer passing via Rust `PyBuffer` / NumPy pointers.
+   - Purpose: Local high-throughput inference (LangChain, vLLM co-located on the same node).
+
+Key Performance Goal:
+Eliminate double-serialization overhead when passing dense vector embeddings (e.g., 1536-dimensional `f32` arrays) and KV-cache byte buffers between Python application space and the Rust hypergraph runtime.
+
+--------------------------------------------------------------------------------
+2. PROTOCOL BUFFERS SCHEMA (hypergraph_service.proto)
+--------------------------------------------------------------------------------
+
+```protobuf
+syntax = "proto3";
+
+package hypergraph.v1;
+
+option go_package = "hypergraph/v1;hypergraphv1";
+option java_package = "com.hypergraph.v1";
+
+// Main Hypergraph Engine Service Contract
+service HypergraphEngineService {
+  // --- Semantic & Temporal Graph RPCs (LangChain Tier) ---
+  rpc InsertHyperedge (InsertHyperedgeRequest) returns (InsertHyperedgeResponse);
+  rpc InsertHyperedgeBatch (stream InsertHyperedgeRequest) returns (BatchResponse);
+  rpc QueryTemporalContext (QueryTemporalRequest) returns (QueryTemporalResponse);
+  rpc StreamTemporalContext (QueryTemporalRequest) returns (stream HyperedgePayload);
+
+  // --- vLLM KV-Cache Secondary Storage Tier RPCs ---
+  rpc StoreKVBlocks (StoreKVBlocksRequest) returns (StoreKVBlocksResponse);
+  rpc LoadKVBlocks (LoadKVBlocksRequest) returns (LoadKVBlocksResponse);
+  
+  // --- Health & Administrative RPCs ---
+  rpc HealthCheck (HealthCheckRequest) returns (HealthCheckResponse);
+  rpc TriggerCheckpoint (CheckpointRequest) returns (CheckpointResponse);
+}
+
+message Participant {
+  string entity_id = 1;
+  string role = 2;
+}
+
+message TemporalBoundary {
+  optional int64 valid_from_epoch = 1; // Unix timestamp in seconds
+  optional int64 valid_to_epoch = 2;   // Unix timestamp in seconds (null = ongoing)
+  bool is_ongoing = 3;
+  string raw_expression = 4;
+}
+
+message HyperedgePayload {
+  string id = 1;
+  string event_type = 2;
+  string summary = 3;
+  repeated Participant participants = 4;
+  TemporalBoundary temporal_boundary = 5;
+  float confidence_score = 6;
+  bytes embedding_raw = 7;             // Packed raw f32 array bytes (little-endian)
+}
+
+message InsertHyperedgeRequest {
+  string session_id = 1;
+  HyperedgePayload hyperedge = 2;
+}
+
+message InsertHyperedgeResponse {
+  bool success = 1;
+  string hyperedge_id = 2;
+  int64 sequence_id = 3;
+}
+
+message BatchResponse {
+  uint32 processed_count = 1;
+  bool all_succeeded = 2;
+  repeated string errors = 3;
+}
+
+message QueryTemporalRequest {
+  string session_id = 1;
+  bytes query_embedding_raw = 2;       // Packed f32 array
+  int64 target_timestamp_epoch = 3;
+  float decay_lambda = 4;
+  uint32 top_k = 5;
+}
+
+message QueryTemporalResponse {
+  repeated HyperedgePayload matched_edges = 1;
+  repeated float decay_scores = 2;
+  uint64 query_latency_us = 3;
+}
+
+message StoreKVBlocksRequest {
+  string block_hash = 1;
+  bytes kv_chunk_bytes = 2;            // Raw CUDA pinned memory chunk bytes
+  repeated string associated_hyperedge_ids = 3;
+}
+
+message StoreKVBlocksResponse {
+  bool success = 1;
+  uint64 bytes_written = 2;
+}
+
+message LoadKVBlocksRequest {
+  string block_hash = 1;
+}
+
+message LoadKVBlocksResponse {
+  bool hit = 1;
+  bytes kv_chunk_bytes = 2;
+}
+
+message HealthCheckRequest {}
+message HealthCheckResponse {
+  bool healthy = 1;
+  uint64 uptime_seconds = 2;
+  uint32 active_connections = 3;
+}
+
+message CheckpointRequest {}
+message CheckpointResponse {
+  bool success = 1;
+  uint64 wal_sequence_id = 2;
+}
+
+```
+
+---
+
+3. ZERO-COPY SERIALIZATION & MEMORY PASSING
+
+---
+
+To pass embeddings without string/array parsing overhead:
+
+3.1 Raw Vector Memory Packing
+
+* Floating point arrays (`Vec<f32>`) are transmitted as raw binary bytes (`bytes embedding_raw`) instead of JSON or Protobuf `repeated float`.
+* Byte Order: Standard Little-Endian.
+* Size Calculation: `byte_length = vector_length * std::mem::size_of::<f32>()`.
+
+3.2 Rust Decoding Snippet (`bytemuck` / Zero-Copy Slice)
+
+```rust
+use bytemuck;
+
+pub fn decode_embedding_raw(raw_bytes: &[u8]) -> Result<&[f32], EngineError> {
+    if raw_bytes.len() % 4 != 0 {
+        return Err(EngineError::InvalidAlignment);
+    }
+    // Zero-copy cast from u8 slice to f32 slice
+    let f32_slice: &[f32] = bytemuck::try_cast_slice(raw_bytes)
+        .map_err(|_| EngineError::AlignmentMismatch)?;
+    Ok(f32_slice)
+}
+
+```
+
+---
+
+4. PyO3 IN-PROCESS C-FFI BINDINGS
+
+---
+
+For co-located Python environments (e.g., local agent or single-node vLLM instance), bypass gRPC completely using direct PyO3 C-FFI bindings (`maturin`).
+
+4.1 PyO3 Module Interface Specification (`src/lib.rs`)
+
+```rust
+use pyo3::prelude::*;
+use pyo3::types::PyBytes;
+use std::sync::Arc;
+
+#[pyclass]
+pub struct NativeHypergraphEngine {
+    inner: Arc<ConcurrentHypergraphEngine>,
+}
+
+#[pymethods]
+impl NativeHypergraphEngine {
+    #[new]
+    pub fn new(storage_path: &str) -> PyResult<Self> {
+        let engine = ConcurrentHypergraphEngine::open(storage_path)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
+        Ok(Self { inner: Arc::new(engine) })
+    }
+
+    /// Zero-copy insert receiving Python buffer object directly
+    pub fn insert_hyperedge_fast(
+        &self,
+        event_type: &str,
+        node_labels: Vec<String>,
+        valid_from: i64,
+        valid_to: Option<i64>,
+        embedding_buffer: &PyBytes
+    ) -> PyResult<String> {
+        let raw_bytes: &[u8] = embedding_buffer.as_bytes();
+        let float_slice = decode_embedding_raw(raw_bytes)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
+
+        let id = self.inner.insert_hyperedge_raw(event_type, &node_labels, valid_from, valid_to, float_slice)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
+
+        Ok(id.to_string())
+    }
+}
+
+#[pymodule]
+fn hypergraph_engine_native(_py: Python, m: &PyModule) -> PyResult<()> {
+    m.add_class::<NativeHypergraphEngine>()?;
+    Ok(())
+}
+
+```
+
+4.2 Python Usage Example (Direct PyO3 Memory Access)
+
+```python
+import numpy as np
+import hypergraph_engine_native
+
+# Instantiate native C-extension
+engine = hypergraph_engine_native.NativeHypergraphEngine("/data/hypergraph_db")
+
+# Create dense float array in memory
+embedding = np.random.randn(1536).astype(np.float32)
+
+# Pass raw buffer via PyBytes (Zero Copy)
+edge_id = engine.insert_hyperedge_fast(
+    "M_AND_A",
+    ["org:microsoft", "org:activision"],
+    1697155200,
+    None,
+    bytes(embedding.data)
+)
+
+```
+
+---
+
+5. BENCHMARKING, VALIDATION & VICTORY POINTS
+
+---
+
+5.1 Performance Benchmarks & Targets
+
++-------------------------------------+--------------------+--------------------+
+| Metric                              | Maximum Threshold  | Target Objective   |
++-------------------------------------+--------------------+--------------------+
+| gRPC RPC Latency (Local UDS)        | < 1.0 ms           | < 0.3 ms           |
+| PyO3 FFI In-Process Latency         | < 0.05 ms          | < 0.01 ms          |
+| Ingestion Rate (PyO3 Direct)        | > 20,000 ops/sec   | > 80,000 ops/sec   |
+| gRPC Stream Throughput              | > 10,000 ops/sec   | > 35,000 ops/sec   |
++-------------------------------------+--------------------+--------------------+
+
+5.2 Validation & Quality Assurance Test Suite
+
+1. gRPC Integration Tests:
+* Run `tonic-build` during build phase to generate clean client/server code.
+* Verify that streaming endpoints handle backpressure (`tokio::sync::mpsc`) without buffer overflow panics.
+
+
+2. PyO3 Memory Alignment Tests:
+* Run `pytest` passing misaligned byte buffers (e.g., length not divisible by 4) and verify that `EngineError::InvalidAlignment` is caught safely without segfaults.
+
+
+3. Serialization Round-Trip Verification:
+* Serialize 1,000 hyperedges with 1536-dimensional embeddings.
+* Transmit over gRPC endpoint and unpack.
+* Assert `np.testing.assert_array_almost_equal` between original and deserialized vector arrays.
+
+
+
+---
+
+6. END CHECKLIST & VICTORY CRITERIA
+
+---
+
+[ ] Protobuf schema successfully compiles via `tonic-build` in Rust `build.rs`.
+[ ] Zero-copy byte casting uses `bytemuck` without memory copying.
+[ ] PyO3 module compiles cleanly using `maturin build`.
+[ ] gRPC endpoints achieve > 10,000 ops/sec over local UNIX domain sockets.
+[ ] Python client can connect, query, and insert data with zero memory panics.
