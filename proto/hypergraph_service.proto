@@ -1,0 +1,180 @@
+syntax = "proto3";
+
+package hypergraph.v1;
+
+option go_package = "hypergraph/v1;hypergraphv1";
+option java_package = "com.hypergraph.v1";
+
+// Main Hypergraph Engine Service Contract.
+//
+// Conventions:
+// * Hyperedge ids are decimal strings of the engine's packed 64-bit id.
+// * `*_raw` byte fields are packed little-endian f32 arrays.
+// * KV `block_hash` values are 64-character lowercase hex BLAKE3 digests.
+// * Sessions are graph entities: clients add the participant `session:<id>`
+//   to every hyperedge of a session and scope reads with a 1-hop traversal
+//   seeded at that node. `session_id` request fields are informational.
+// * When the server runs with an API key, every call must send it as the
+//   `x-api-key` metadata entry.
+service HypergraphEngineService {
+  // --- Semantic & Temporal Graph RPCs (LangChain Tier) ---
+  rpc InsertHyperedge (InsertHyperedgeRequest) returns (InsertHyperedgeResponse);
+  rpc InsertHyperedgeBatch (stream InsertHyperedgeRequest) returns (BatchResponse);
+  rpc QueryTemporalContext (QueryTemporalRequest) returns (QueryTemporalResponse);
+  rpc StreamTemporalContext (QueryTemporalRequest) returns (stream HyperedgePayload);
+  rpc TraverseTemporalContext (TraverseTemporalRequest) returns (QueryTemporalResponse);
+  rpc DeleteHyperedges (DeleteHyperedgesRequest) returns (DeleteHyperedgesResponse);
+
+  // --- vLLM KV-Cache Secondary Storage Tier RPCs ---
+  rpc StoreKVBlocks (StoreKVBlocksRequest) returns (StoreKVBlocksResponse);
+  rpc LoadKVBlocks (LoadKVBlocksRequest) returns (LoadKVBlocksResponse);
+  rpc PlanKVEvictions (PlanKVEvictionsRequest) returns (PlanKVEvictionsResponse);
+
+  // --- Health & Administrative RPCs ---
+  rpc HealthCheck (HealthCheckRequest) returns (HealthCheckResponse);
+  rpc TriggerCheckpoint (CheckpointRequest) returns (CheckpointResponse);
+}
+
+message Participant {
+  string entity_id = 1;
+  // Accepted on insert but not persisted by the engine; empty on reads.
+  string role = 2;
+}
+
+message TemporalBoundary {
+  optional int64 valid_from_epoch = 1; // Unix timestamp in seconds
+  optional int64 valid_to_epoch = 2;   // Unix timestamp in seconds (null = ongoing)
+  bool is_ongoing = 3;
+  string raw_expression = 4;
+}
+
+message HyperedgePayload {
+  // Ignored on insert (the engine assigns ids).
+  string id = 1;
+  string event_type = 2;
+  // Text payload (message content, document chunk); persisted and returned
+  // on reads. Empty means none.
+  string summary = 3;
+  repeated Participant participants = 4;
+  TemporalBoundary temporal_boundary = 5;
+  float confidence_score = 6;          // In (0, 1]; 0 (unset) means 1.0 on insert
+  bytes embedding_raw = 7;             // Packed raw f32 array bytes (little-endian)
+}
+
+message InsertHyperedgeRequest {
+  string session_id = 1;
+  HyperedgePayload hyperedge = 2;
+}
+
+message InsertHyperedgeResponse {
+  bool success = 1;
+  string hyperedge_id = 2;
+  int64 sequence_id = 3;
+}
+
+message BatchResponse {
+  uint32 processed_count = 1;
+  bool all_succeeded = 2;
+  repeated string errors = 3;
+}
+
+message QueryTemporalRequest {
+  string session_id = 1;
+  bytes query_embedding_raw = 2;       // Packed f32 array
+  int64 target_timestamp_epoch = 3;
+  float decay_lambda = 4;              // Per day; 0 = engine default
+  uint32 top_k = 5;
+}
+
+message QueryTemporalResponse {
+  repeated HyperedgePayload matched_edges = 1;
+  repeated float decay_scores = 2;
+  uint64 query_latency_us = 3;
+}
+
+enum TraversalOrder {
+  TRAVERSAL_ORDER_RELEVANCE = 0;       // Highest score first
+  TRAVERSAL_ORDER_CHRONOLOGICAL = 1;   // Newest valid_from first
+}
+
+message TraverseTemporalRequest {
+  repeated string seed_entity_ids = 1; // Unknown entities are ignored
+  uint32 k_hops = 2;                   // 1..=4; 0 = 1
+  int64 as_of_epoch = 3;               // 0 = now
+  bytes query_embedding_raw = 4;       // Optional similarity re-rank
+  float decay_lambda = 5;              // Per day; 0 = engine default
+  uint32 top_k = 6;                    // 0 = unlimited
+  TraversalOrder order = 7;
+  repeated string event_types = 8;     // Empty = all
+}
+
+message DeleteHyperedgesRequest {
+  repeated string hyperedge_ids = 1;
+}
+
+message DeleteHyperedgesResponse {
+  uint32 deleted_count = 1;            // Ids that were not live are skipped
+}
+
+enum KvPrecision {
+  KV_PRECISION_UNSPECIFIED = 0;
+  KV_PRECISION_FP16 = 1;
+  KV_PRECISION_BF16 = 2;
+  KV_PRECISION_INT8 = 3;
+}
+
+// PagedAttention block geometry: tensor shape [2, num_layers, block_size, num_heads, head_dim].
+message KvBlockLayout {
+  uint32 num_layers = 1;
+  uint32 num_heads = 2;
+  uint32 head_dim = 3;
+  uint32 block_size = 4;
+  KvPrecision precision = 5;
+}
+
+message StoreKVBlocksRequest {
+  string block_hash = 1;
+  bytes kv_chunk_bytes = 2;            // Raw CUDA pinned memory chunk bytes
+  repeated string associated_hyperedge_ids = 3;
+  optional KvBlockLayout layout = 4;   // Omitted = opaque payload
+}
+
+message StoreKVBlocksResponse {
+  bool success = 1;
+  uint64 bytes_written = 2;
+  bool deduplicated = 3;               // Payload already stored under another key
+}
+
+message LoadKVBlocksRequest {
+  string block_hash = 1;
+}
+
+message LoadKVBlocksResponse {
+  bool hit = 1;
+  bytes kv_chunk_bytes = 2;
+  optional KvBlockLayout layout = 3;
+}
+
+message PlanKVEvictionsRequest {
+  float decay_threshold = 1;
+  int64 now_epoch = 2;
+  uint32 max_candidates = 3;           // 0 = unlimited
+}
+
+message PlanKVEvictionsResponse {
+  repeated string block_hashes = 1;    // Lowest score first
+  repeated float scores = 2;
+}
+
+message HealthCheckRequest {}
+message HealthCheckResponse {
+  bool healthy = 1;
+  uint64 uptime_seconds = 2;
+  uint32 active_connections = 3;
+}
+
+message CheckpointRequest {}
+message CheckpointResponse {
+  bool success = 1;
+  uint64 wal_sequence_id = 2;
+}
