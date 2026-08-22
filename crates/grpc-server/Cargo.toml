@@ -1,0 +1,40 @@
+[package]
+name = "grpc-server"
+description = "Tonic gRPC front-end for the Temporal Hypergraph Engine and its KV block tier"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "grpc_server"
+
+[[bin]]
+name = "hypergraph-server"
+path = "src/main.rs"
+
+[dependencies]
+engine-core.workspace = true
+vllm-kv-store.workspace = true
+bytes.workspace = true
+prost.workspace = true
+tokio.workspace = true
+tokio-stream.workspace = true
+tonic.workspace = true
+tower.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+[build-dependencies]
+protoc-bin-vendored.workspace = true
+tonic-build.workspace = true
+
+[dev-dependencies]
+criterion = { workspace = true, features = ["async_tokio"] }
+tempfile.workspace = true
+hyper-util = { version = "0.1", features = ["tokio"] }
+
+[[bench]]
+name = "grpc_uds"
+harness = false
