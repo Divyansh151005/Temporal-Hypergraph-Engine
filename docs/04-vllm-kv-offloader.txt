@@ -1,0 +1,253 @@
+```text
+# ==============================================================================
+# DOCUMENT SPECIFICATION: docs/04-vllm-kv-offloader.txt
+# ENGINE MODULE: vLLM KV-Cache Offloader & Secondary Storage Tier
+# LANGUAGE/TARGET: Rust (Edition 2021) + Python (PyTorch / vLLM Hooks)
+# ==============================================================================
+
+[SYSTEM ROLE FOR AGENT]
+You are an expert LLM Systems Architect and High-Performance Storage Engineer specializing in GPU memory management, vLLM PagedAttention architecture, CUDA pinned memory allocations, and zero-copy KV-cache tensor offloading. Implement the secondary storage tier connector, block hashing mechanisms, tensor serialization algorithms, and eviction/prefetching workflows specified in this document.
+
+--------------------------------------------------------------------------------
+1. ARCHITECTURAL OVERVIEW
+--------------------------------------------------------------------------------
+
+In large-scale LLM inference (e.g., vLLM, SGLang), GPU VRAM is the primary bottleneck. The Key-Value (KV) cache for extended dialogue histories quickly exhausts high-bandwidth memory (HBM).
+
+This module implements a dynamic, temporal-aware Secondary KV-Cache Storage Tier:
+1. Tier 0 (HBM / GPU Memory): Active working context managed via vLLM PagedAttention blocks.
+2. Tier 1 (Host RAM / Pinned Memory): High-speed system memory staging area managed by this Rust engine.
+3. Tier 2 (NVMe / Storage Engine): Disk-backed temporal hypergraph persistent KV block store.
+
+Key Innovations:
+- Temporal KV Eviction: Instead of naive LRU eviction, KV blocks associated with hyperedges whose decay weight w(t) falls below threshold tau are selectively offloaded to Tier 1/Tier 2.
+- Content-Addressed Block Deduplication: KV blocks are indexed via BLAKE3 content hashes computed over token IDs and layer embeddings.
+- Async Prefetching: When a query matches hyperedges in Set B during bipartite traversal, corresponding KV blocks are asynchronously fetched back to GPU pinned memory before transformer attention layers execute.
+
+--------------------------------------------------------------------------------
+2. KV-CACHE BLOCK SPECIFICATION & SERIALIZATION
+--------------------------------------------------------------------------------
+
+vLLM allocates KV cache in fixed-size blocks (e.g., block_size = 16 tokens).
+
+2.1 KV Block Layout Parameters
+- Number of Layers: L
+- Number of Heads: H
+- Head Dimension: D
+- Block Size (Tokens): B
+- Element Precision: FP16 (2 bytes) or BF16 (2 bytes)
+- Block Tensor Shape: [2, L, B, H, D]  (where index 0 = Key tensor, 1 = Value tensor)
+- Bytes per Block: 2 * L * B * H * D * sizeof(uint16)
+
+For L=32, H=32, D=128, B=16 (e.g., Llama-3-8B):
+Bytes per block = 2 * 32 * 16 * 32 * 128 * 2 = 8,388,608 bytes (8 MB per block).
+
+2.2 Block Binary Framing Format
+
+Each offloaded KV block is stored as a contiguous binary blob:
+
++-------------------+-------------------+-------------------+-------------------+
+| Magic Header (4B) | Hash Digest (32B) | Layer Count (2B)  | Head Count (2B)   |
+| "V3KV" 0x56334B56 | BLAKE3 Hash       | u16               | u16               |
++-------------------+-------------------+-------------------+-------------------+
+| Head Dim (2B)     | Block Size (2B)   | Precision ID (2B) | Payload Len (4B)  |
+| u16               | u16               | 1=FP16, 2=BF16    | u32               |
++-------------------+-------------------+-------------------+-------------------+
+| Raw Pinned Tensor Byte Stream (Little-Endian FP16/BF16)                       |
++-------------------------------------------------------------------------------+
+
+2.3 Rust Block Struct Definition
+
+```rust
+#[repr(C)]
+pub struct KvBlockHeader {
+    pub magic: [u8; 4],          // b"V3KV"
+    pub hash_digest: [u8; 32],   // BLAKE3 Hash
+    pub num_layers: u16,
+    pub num_heads: u16,
+    pub head_dim: u16,
+    pub block_size: u16,
+    pub precision: u16,          // 1 = FP16, 2 = BF16, 3 = INT8
+    pub payload_len: u32,
+}
+
+pub struct OffloadedKvBlock {
+    pub header: KvBlockHeader,
+    pub data: Vec<u8>,           // Pinned memory vector or mmap slice
+}
+
+```
+
+---
+
+3. VLLM CONNECTOR HOOKS & PYTHON ADAPTER
+
+---
+
+The Python module integrates directly into vLLM's `BlockSpaceManager` and `KVCacheAllocator`.
+
+3.1 Python Abstract Storage Extension Interface
+
+```python
+import torch
+import numpy as np
+from typing import List, Optional, Dict
+
+class HypergraphKVOffloader:
+    def __init__(self, rust_engine_handle, device_id: int = 0):
+        self.engine = rust_engine_handle
+        self.device_id = device_id
+        
+    def hash_block_tokens(self, token_ids: List[int], parent_hash: Optional[bytes] = None) -> bytes:
+        """Computes BLAKE3 deterministic block key from token sequence."""
+        import blake3
+        hasher = blake3.blake3()
+        if parent_hash:
+            hasher.update(parent_hash)
+        hasher.update(np.array(token_ids, dtype=np.int32).tobytes())
+        return hasher.digest()
+
+    def offload_kv_block(
+        self, 
+        block_hash: bytes, 
+        key_tensor: torch.Tensor, 
+        value_tensor: torch.Tensor,
+        hyperedge_id: str
+    ) -> bool:
+        """
+        Offloads key and value tensors from GPU VRAM -> Host Pinned Memory -> Engine Store.
+        Tensors must be contiguous in memory.
+        """
+        assert key_tensor.is_contiguous()
+        assert value_tensor.is_contiguous()
+        
+        # Concatenate K and V tensors
+        kv_combined = torch.stack([key_tensor, value_tensor], dim=0)
+        
+        # Copy to CPU host pinned memory asynchronously
+        cpu_pinned = kv_combined.to("cpu", non_blocking=True)
+        torch.cuda.synchronize()
+        
+        # Pass pointer to Rust storage engine via zero-copy C-FFI
+        raw_ptr = cpu_pinned.data_ptr()
+        num_bytes = cpu_pinned.numel() * cpu_pinned.element_size()
+        
+        return self.engine.store_kv_block_raw(block_hash, raw_ptr, num_bytes, hyperedge_id)
+
+    def prefetch_kv_block(self, block_hash: bytes, target_tensor: torch.Tensor) -> bool:
+        """
+        Asynchronously loads block from Rust Engine into target GPU tensor buffer.
+        """
+        raw_ptr = target_tensor.data_ptr()
+        num_bytes = target_tensor.numel() * target_tensor.element_size()
+        
+        success = self.engine.load_kv_block_raw(block_hash, raw_ptr, num_bytes)
+        return success
+
+```
+
+---
+
+4. ASYNCHRONOUS PREFETCHING & TEMPORAL EVICTION PIPELINE
+
+---
+
+4.1 Temporal Eviction Protocol
+
+1. Every N execution ticks, the Rust engine queries all active hyperedges in `BipartiteArena`.
+2. Computes SIMD time decay w(t) for each edge.
+3. If w(t) < tau_offload and edge KV status is IN_GPU_VRAM:
+* Send signal to vLLM `BlockSpaceManager.evict_to_secondary(block_id)`.
+* Transfer block bytes to engine storage and free vLLM GPU physical block index.
+
+
+4. Update `TemporalHyperedge` metadata: `kv_offloaded = true`, `block_hash = BLAKE3_HASH`.
+
+4.2 Prefetching Graph Traversal Integration
+When user prompt triggers a k-hop temporal search:
+
+1. Engine identifies top-K relevant `TemporalHyperedge` instances based on score S = similarity * w(t).
+2. For identified hyperedges, check `block_hash`.
+3. If `kv_offloaded == true`, trigger `tokio::spawn` background task to stream KV blocks from engine memory into CUDA host pinned staging buffers.
+4. Notify vLLM scheduler that blocks are ready in Tier 1 RAM for instant HBM page swapping (`cudaMemcpyAsync`).
+
+---
+
+5. CORE CRATE INTERFACE & PUBLIC API
+
+---
+
+```rust
+impl ConcurrentHypergraphEngine {
+    /// Stores raw KV block bytes directly from Python memory pointer into persistent storage.
+    pub unsafe fn store_kv_block_raw(
+        &self,
+        block_hash: &[u8; 32],
+        data_ptr: *const u8,
+        data_len: usize,
+        associated_hyperedge_id: HyperedgeId,
+    ) -> Result<(), EngineError>;
+
+    /// Reads KV block into a pre-allocated CUDA pinned buffer memory pointer.
+    pub unsafe fn load_kv_block_raw(
+        &self,
+        block_hash: &[u8; 32],
+        target_ptr: *mut u8,
+        target_len: usize,
+    ) -> Result<bool, EngineError>;
+
+    /// Evaluates temporal decay across all active KV blocks and returns candidate hashes for eviction.
+    pub fn plan_kv_evictions(&self, decay_threshold: f32) -> Vec<[u8; 32]>;
+}
+
+```
+
+---
+
+6. BENCHMARKING, VALIDATION & VICTORY POINTS
+
+---
+
+6.1 Performance Benchmarks & Targets
+
++-------------------------------------+--------------------+--------------------+
+| Metric                              | Maximum Threshold  | Target Objective   |
++-------------------------------------+--------------------+--------------------+
+| KV Block Offload Overhead (8MB)     | < 1.5 ms           | < 0.4 ms           |
+| KV Block Prefetch Latency (8MB)     | < 1.0 ms           | < 0.3 ms           |
+| HBM Memory Savings (Context 128k)  | > 60%              | > 85%              |
+| Hash Collision Rate (BLAKE3 256-bit)| 0.00%              | 0.00%              |
++-------------------------------------+--------------------+--------------------+
+
+6.2 Validation & Quality Assurance Test Suite
+
+1. CUDA Pinned Memory Safety:
+* Use `cudaMemcheck` and PyTorch CUDA stream synchronization tests to verify zero race conditions during async host-to-device `cudaMemcpyAsync` operations.
+
+
+2. KV Bit-Exactness Test:
+* Save an original KV tensor state on GPU.
+* Offload tensor to Rust secondary storage engine.
+* Evict GPU memory completely and zero out allocation.
+* Prefetch KV tensor back into GPU memory.
+* Compute `torch.allclose(original_kv, prefetched_kv, atol=1e-5)` and assert equality.
+
+
+3. End-to-End LLM Generation Accuracy:
+* Run vLLM context retrieval prompt on a 128k token document.
+* Compare output token log-probs between baseline in-VRAM attention and offloaded/pre-fetched secondary storage tier.
+* Maximum allowed log-prob KL-divergence: < 1e-4.
+
+
+
+---
+
+7. END CHECKLIST & VICTORY CRITERIA
+
+---
+
+[ ] KV block header framing protocol guarantees 64-byte alignment for fast SIMD / DMA operations.
+[ ] Python `HypergraphKVOffloader` bindings execute non-blocking zero-copy pointer transfers.
+[ ] Temporal eviction planner successfully frees Tier 0 HBM memory based on mathematical score w(t).
+[ ] Prefetch pipeline streams KV blocks back to GPU VRAM before attention execution begins.
+[ ] Bit-exactness validation succeeds with zero loss in floating-point precision across offload cycles.
