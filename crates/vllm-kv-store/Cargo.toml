@@ -1,0 +1,29 @@
+[package]
+name = "vllm-kv-store"
+description = "Content-addressed secondary storage tier for vLLM PagedAttention KV-cache blocks"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+engine-core.workspace = true
+blake3.workspace = true
+bytemuck.workspace = true
+crc32fast.workspace = true
+dashmap.workspace = true
+memmap2.workspace = true
+parking_lot.workspace = true
+rayon.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+criterion.workspace = true
+rand.workspace = true
+tempfile.workspace = true
+
+[[bench]]
+name = "kv_block"
+harness = false
