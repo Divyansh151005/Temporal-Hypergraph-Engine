@@ -1,0 +1,19 @@
+[build-system]
+requires = ["maturin>=1.5,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "hypergraph-engine-native"
+description = "In-process bindings for the Temporal Hypergraph Engine and its vLLM KV block tier"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+classifiers = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: Implementation :: CPython",
+]
+dynamic = ["version"]
+
+[tool.maturin]
+module-name = "hypergraph_engine_native"
+bindings = "pyo3"
+features = ["pyo3/extension-module"]

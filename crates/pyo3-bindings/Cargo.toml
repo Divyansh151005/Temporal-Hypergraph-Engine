@@ -1,0 +1,21 @@
+[package]
+name = "pyo3-bindings"
+description = "In-process PyO3 bindings (hypergraph_engine_native) for the Temporal Hypergraph Engine"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+# `extension-module` is enabled by maturin (see pyproject.toml) so that plain
+# `cargo check/clippy` never needs libpython. Python tests cover this crate.
+[lib]
+name = "hypergraph_engine_native"
+crate-type = ["cdylib", "rlib"]
+test = false
+doctest = false
+
+[dependencies]
+engine-core.workspace = true
+vllm-kv-store.workspace = true
+pyo3.workspace = true
