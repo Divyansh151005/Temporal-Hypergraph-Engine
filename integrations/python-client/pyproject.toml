@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hypergraph-client"
+version = "0.1.0"
+description = "gRPC client for the Temporal Hypergraph Engine (shared by the LangChain and LlamaIndex integrations)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+dependencies = [
+    "grpcio>=1.76",
+    "protobuf>=6.31.1",
+    "numpy>=1.24",
+]
+
+[project.entry-points.pytest11]
+hypergraph_client = "hypergraph_client.testing"
+
+[project.optional-dependencies]
+test = ["pytest>=7", "pytest-asyncio>=0.21"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+hypergraph_client = ["py.typed", "_proto/*.pyi"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
