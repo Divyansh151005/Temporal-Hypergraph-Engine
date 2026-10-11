@@ -1,0 +1,174 @@
+```text
+# ==============================================================================
+# DOCUMENT SPECIFICATION: docs/05-extraction-benchmarks.txt
+# ENGINE MODULE: Knowledge Extraction Benchmarks & F1 Evaluation Harness
+# LANGUAGE/TARGET: Python (Evaluation Scripts) + Rust (CLI Runner)
+# ==============================================================================
+
+[SYSTEM ROLE FOR AGENT]
+You are an expert Machine Learning Data Engineer and Evaluation Specialist. Implement the benchmark suite, synthetic data generation pipelines, and graph-matching F1 evaluation scripts described in this document. This module measures how accurately unstructured text is transformed into Bipartite Temporal Hypergraphs.
+
+--------------------------------------------------------------------------------
+1. ARCHITECTURAL OVERVIEW
+--------------------------------------------------------------------------------
+
+An in-memory hypergraph is useless if the initial Knowledge Extraction pipeline (LLM parsing text -> Graph Operations) hallucinates or drops information. 
+
+This module provides an automated evaluation harness to continuously measure extraction quality. It relies on three phases:
+1. Synthetic Generation: Creating gold-standard (Ground Truth) datasets containing raw text and their exact hypergraph representations.
+2. Extraction Pipeline: Running the target LLM over the raw text to generate a predicted hypergraph.
+3. Graph Alignment & F1 Scoring: Comparing the Predicted Graph against the Ground Truth Graph using Bipartite Graph Isomorphism algorithms.
+
+--------------------------------------------------------------------------------
+2. SYNTHETIC DATA GENERATION PIPELINE
+--------------------------------------------------------------------------------
+
+To avoid human annotation bottlenecks, we generate multi-hop temporal logic puzzles and corporate relationship timelines synthetically using a frontier LLM (e.g., GPT-4o), operating in "reverse".
+
+2.1 The "Reverse Generation" Protocol
+Instead of asking an LLM to extract a graph from text, we:
+1. Programmatically generate a strictly valid JSON Ground Truth Hypergraph (nodes, temporal edges).
+2. Prompt the LLM to write a complex, unstructured news article, transcript, or narrative that perfectly describes the generated JSON graph.
+3. Save the pair (`article.txt`, `ground_truth.json`).
+
+2.2 Synthetic Data Schema
+
+```json
+{
+  "dataset_id": "syn-corp-m-and-a-001",
+  "raw_text": "In October 2023, Microsoft finalized its acquisition of Activision Blizzard, a process that started back in early 2022. Following this, Bobby Kotick stepped down as CEO on December 29, 2023.",
+  "ground_truth_graph": {
+    "nodes": [
+      {"id": "org:microsoft", "label": "Microsoft"},
+      {"id": "org:activision", "label": "Activision Blizzard"},
+      {"id": "per:bobby_kotick", "label": "Bobby Kotick"}
+    ],
+    "hyperedges": [
+      {
+        "event_type": "ACQUISITION",
+        "participants": ["org:microsoft", "org:activision"],
+        "valid_from": 1696118400,
+        "valid_to": null
+      },
+      {
+        "event_type": "EXECUTIVE_ROLE",
+        "participants": ["per:bobby_kotick", "org:activision"],
+        "valid_from": null,
+        "valid_to": 1703808000
+      }
+    ]
+  }
+}
+
+```
+
+---
+
+3. GRAPH ALIGNMENT & F1 SCORING METRICS
+
+---
+
+Evaluating graph extraction requires partial matching. A predicted edge might have the correct participants but the wrong timestamp.
+
+3.1 Bipartite Node Alignment (Entity Resolution)
+Before scoring edges, we must align predicted nodes with ground-truth nodes.
+
+* Use Cosine Similarity on Node Labels.
+* Threshold: If `cosine(predicted_label, truth_label) > 0.90`, treat as a match.
+
+3.2 Edge Scoring Logic
+For each predicted hyperedge matched to a ground-truth hyperedge:
+
+1. Semantic Match (0.0 to 1.0): Matches `event_type`.
+2. Participant Jaccard Index (0.0 to 1.0): `Intersection(Pred_Nodes, Truth_Nodes) / Union(Pred_Nodes, Truth_Nodes)`.
+3. Temporal Boundary IoU (0.0 to 1.0): Intersection over Union of the time spans `[valid_from, valid_to]`.
+
+Overall Edge Score = (Semantic * 0.3) + (Participant * 0.5) + (Temporal * 0.2).
+Threshold for True Positive (TP): Edge Score > 0.80.
+
+3.3 Standard Metrics
+
+* Precision = TP / (TP + FP)  -> (How much of what we extracted was correct?)
+* Recall = TP / (TP + FN)     -> (How much of the truth did we successfully extract?)
+* F1 Score = 2 * (Precision * Recall) / (Precision + Recall)
+
+---
+
+4. EVALUATION SCRIPTS (Python Harness)
+
+---
+
+4.1 `evaluate_f1.py` Core Implementation
+
+```python
+import json
+import numpy as np
+from typing import List, Dict
+
+def calculate_jaccard(list1: List[str], list2: List[str]) -> float:
+    set1, set2 = set(list1), set(list2)
+    if not set1 or not set2: return 0.0
+    return len(set1.intersection(set2)) / len(set1.union(set2))
+
+def score_edge(pred_edge: Dict, truth_edge: Dict) -> float:
+    # 1. Semantic (Exact match for simplicity in this snippet)
+    semantic_score = 1.0 if pred_edge["event_type"] == truth_edge["event_type"] else 0.0
+    
+    # 2. Participants
+    jaccard_score = calculate_jaccard(pred_edge["participants"], truth_edge["participants"])
+    
+    # 3. Temporal (Simplified boolean check)
+    temp_score = 1.0
+    if pred_edge.get("valid_from") != truth_edge.get("valid_from"):
+        temp_score -= 0.5
+    if pred_edge.get("valid_to") != truth_edge.get("valid_to"):
+        temp_score -= 0.5
+        
+    return (semantic_score * 0.3) + (jaccard_score * 0.5) + (max(temp_score, 0.0) * 0.2)
+
+def compute_dataset_f1(predictions_path: str, truth_path: str) -> dict:
+    # Implementation handles bipartite matching using scipy.optimize.linear_sum_assignment
+    pass
+
+```
+
+---
+
+5. BENCHMARKING, VALIDATION & VICTORY POINTS
+
+---
+
+5.1 Quality Benchmarks & Targets
+
++-------------------------------------+--------------------+--------------------+
+| Metric                              | Minimum Acceptable | Target Objective   |
++-------------------------------------+--------------------+--------------------+
+| Node Extraction Precision           | > 0.85             | > 0.95             |
+| Node Extraction Recall              | > 0.80             | > 0.92             |
+| Edge Participant F1                 | > 0.75             | > 0.88             |
+| Temporal Boundary Accuracy          | > 0.70             | > 0.85             |
++-------------------------------------+--------------------+--------------------+
+
+5.2 Continuous Integration (CI) Validation
+
+1. Regression Testing pipeline:
+* On every pull request touching the extraction prompt or LLM parsing logic, GitHub Actions must run the `evaluate_f1.py` script against the `core_100_golden_dataset.json`.
+* PR fails automatically if the aggregate F1 score drops by more than 0.02.
+
+
+2. Chaos/Noise Test:
+* Inject adversarial noise (e.g., typos, irrelevant paragraphs) into the synthetic raw text.
+* Assert that extraction Recall remains > 0.80 even with 30% noise injection.
+
+
+
+---
+
+6. END CHECKLIST & VICTORY CRITERIA
+
+---
+
+[ ] Synthetic data generator reliably outputs 1,000+ text-graph pairs without human intervention.
+[ ] Bipartite node alignment accurately resolves entity aliases using embeddings/cosine similarity.
+[ ] Evaluation harness successfully applies the Hungarian algorithm (`linear_sum_assignment`) to find the optimal mapping between predicted and truth edges.
+[ ] F1, Precision, and Recall metrics correctly output to a `.csv` or CI/CD logging pipeline.
