@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hypergraph-evaluation"
+version = "0.1.0"
+description = "Synthetic data generation, extraction and F1 evaluation for the Temporal Hypergraph Engine"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+dependencies = [
+    "numpy>=1.24",
+    "scipy>=1.10",
+    "jsonschema>=4.17",
+    "openai>=1.55",
+    "httpx>=0.27",
+    "typing-extensions>=4.5",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=7"]
+
+[tool.setuptools]
+packages = ["hypergraph_evaluation", "hypergraph_evaluation.schema"]
+
+[tool.setuptools.package-dir]
+hypergraph_evaluation = "."
+
+[tool.setuptools.package-data]
+"hypergraph_evaluation.schema" = ["*.json"]

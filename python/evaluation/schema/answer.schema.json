@@ -1,0 +1,13 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ContextAnswer",
+  "type": "object",
+  "properties": {
+    "answer": {
+      "type": "string",
+      "description": "The entity name that answers the question, or UNKNOWN if the context does not support an answer."
+    }
+  },
+  "required": ["answer"],
+  "additionalProperties": false
+}

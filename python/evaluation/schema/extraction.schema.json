@@ -1,0 +1,103 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TemporalHypergraphExtraction",
+  "description": "Schema for extracting N-ary hyperedges with temporal boundaries from raw text (docs/MyUnderstanding/Schema_SystemPrompts.txt).",
+  "type": "object",
+  "properties": {
+    "entities": {
+      "type": "array",
+      "description": "List of unique atomic entities identified in the text.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Normalized identifier using format category:snake_case_name (e.g., person:sam_altman, org:openai)."
+          },
+          "name": { "type": "string", "description": "Canonical name of the entity." },
+          "type": {
+            "type": "string",
+            "enum": ["PERSON", "ORGANIZATION", "LOCATION", "PRODUCT", "CONCEPT", "EVENT", "ASSET"],
+            "description": "Primary entity classification."
+          },
+          "aliases": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Alternative names or acronyms mentioned in text."
+          }
+        },
+        "required": ["id", "name", "type", "aliases"],
+        "additionalProperties": false
+      }
+    },
+    "hyperedges": {
+      "type": "array",
+      "description": "List of N-ary relationships (hyperedges) binding 2 or more entities into a single event context.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique hyperedge ID (e.g., edge:acquisition:microsoft_activision_2023)."
+          },
+          "event_type": {
+            "type": "string",
+            "description": "High-level categorization (e.g., EXECUTIVE_ROLE, INVESTMENT, ACQUISITION, PRODUCT_LAUNCH, LEGAL_ACTION)."
+          },
+          "summary": {
+            "type": "string",
+            "description": "One-sentence factual description of the N-ary interaction."
+          },
+          "participants": {
+            "type": "array",
+            "description": "All N entities participating in this hyperedge.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "entity_id": { "type": "string", "description": "Must match an ID from the entities array." },
+                "role": {
+                  "type": "string",
+                  "description": "Functional role within this specific event (e.g., ACQUIRER, TARGET_COMPANY, INVESTOR, REGULATORY_BODY)."
+                }
+              },
+              "required": ["entity_id", "role"],
+              "additionalProperties": false
+            }
+          },
+          "temporal_boundary": {
+            "type": "object",
+            "description": "Temporal interval governing the validity of this hyperedge.",
+            "properties": {
+              "valid_from": {
+                "type": ["string", "null"],
+                "description": "ISO-8601 timestamp (YYYY-MM-DDTHH:MM:SSZ) indicating when the hyperedge became true, or null if unknown."
+              },
+              "valid_to": {
+                "type": ["string", "null"],
+                "description": "ISO-8601 timestamp (YYYY-MM-DDTHH:MM:SSZ) indicating when the hyperedge ended/expired, or null if ongoing/unknown."
+              },
+              "is_ongoing": {
+                "type": "boolean",
+                "description": "True if the state remains active relative to the text's timeline."
+              },
+              "raw_temporal_expression": {
+                "type": ["string", "null"],
+                "description": "Verbatim temporal string extracted from text (e.g., 'Q3 2023', 'last Tuesday', 'from 2018 to 2021')."
+              }
+            },
+            "required": ["valid_from", "valid_to", "is_ongoing", "raw_temporal_expression"],
+            "additionalProperties": false
+          },
+          "confidence_score": {
+            "type": "number",
+            "description": "Extraction confidence in [0, 1] based on textual explicit placement."
+          }
+        },
+        "required": ["id", "event_type", "summary", "participants", "temporal_boundary", "confidence_score"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["entities", "hyperedges"],
+  "additionalProperties": false
+}

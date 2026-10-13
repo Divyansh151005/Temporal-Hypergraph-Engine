@@ -1,0 +1,10 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SyntheticArticle",
+  "type": "object",
+  "properties": {
+    "article": { "type": "string", "description": "The full article, transcript or narrative as plain text." }
+  },
+  "required": ["article"],
+  "additionalProperties": false
+}
