@@ -1,0 +1,87 @@
+name: Core Engine QA Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: engine-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: cargo test --workspace
+
+  memory-safety:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: miri
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: miri
+      - name: Miri with Stacked Borrows (unit tests, including all unsafe pointer code)
+        env:
+          MIRIFLAGS: -Zmiri-disable-isolation
+          PROPTEST_CASES: "4"
+          PROPTEST_DISABLE_FAILURE_PERSISTENCE: "1"
+        run: |
+          cargo +nightly miri test -p temporal-math -p vllm-kv-store --lib --tests
+          cargo +nightly miri test -p engine-core --lib
+      # crossbeam-epoch (behind crossbeam-skiplist) violates Stacked Borrows in
+      # its intrusive list and needs permissive provenance, so the engine-level
+      # tests run without the aliasing model; every other UB check still applies.
+      # Its static global collector is never dropped, so garbage still queued at
+      # exit is reported as leaked; the --lib step above keeps the leak check.
+      - name: Miri on engine integration tests
+        env:
+          MIRIFLAGS: -Zmiri-disable-isolation -Zmiri-disable-stacked-borrows -Zmiri-permissive-provenance -Zmiri-ignore-leaks
+          PROPTEST_CASES: "2"
+          PROPTEST_DISABLE_FAILURE_PERSISTENCE: "1"
+        run: cargo +nightly miri test -p engine-core --tests
+
+  concurrency-loom:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: loom
+      - name: Run Loom model checker
+        run: RUSTFLAGS="--cfg loom" cargo test -p engine-core --test loom_suite --release
+
+  chaos-fuzzing:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: WAL crash recovery chaos test
+        run: cargo test -p engine-core --test chaos_wal_corruptor --test wal_corruption -- --nocapture
+      - name: Build server and offline verifier
+        run: |
+          cargo build --release -p grpc-server
+          cargo build --release -p engine-core --example chaos_verify
+      - name: SIGKILL mid-flush harness
+        run: |
+          pip install -e integrations/python-client
+          python tests/chaos_sigkill_harness.py --edges 100000 --runs 3 --seed 7

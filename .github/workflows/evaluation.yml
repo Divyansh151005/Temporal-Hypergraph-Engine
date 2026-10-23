@@ -1,0 +1,108 @@
+name: evaluation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: evaluation-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  GOLDEN: datasets/core_100_golden_dataset.json
+  PREDICTIONS: datasets/predictions/core_100_predictions.jsonl
+  F1_BASELINE: datasets/predictions/core_100_f1.json
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Build engine server and Python bindings
+        run: |
+          cargo build --release -p grpc-server
+          python -m venv .venv
+          source .venv/bin/activate
+          pip install --upgrade pip maturin
+          (cd crates/pyo3-bindings && maturin develop --release)
+          pip install pytest \
+            -e integrations/python-client \
+            -e integrations/langchain \
+            -e integrations/llamaindex \
+            -e python/evaluation \
+            -r benchmarks/requirements.txt
+
+      - name: Evaluation, benchmark and integration tests
+        run: |
+          source .venv/bin/activate
+          pytest -q \
+            tests/python/evaluation tests/python/benchmarks \
+            tests/python/test_native_bindings.py tests/python/test_grpc_roundtrip.py \
+            integrations/python-client integrations/langchain integrations/llamaindex
+
+      - name: Generator and F1 harness smoke test (offline)
+        run: |
+          source .venv/bin/activate
+          python python/evaluation/synthetic_generator.py --offline --golden --n 40 --out /tmp/golden.json
+          python - <<'EOF'
+          import json
+          records = json.load(open("/tmp/golden.json"))
+          with open("/tmp/identity.jsonl", "w") as out:
+              for r in records:
+                  out.write(json.dumps({"dataset_id": r["dataset_id"], "graph": r["ground_truth_graph"]}) + "\n")
+          EOF
+          python python/evaluation/evaluate_f1.py --pred /tmp/identity.jsonl --truth /tmp/golden.json --min-recall 0.999
+
+      - name: F1 regression gate on the committed golden dataset
+        run: |
+          source .venv/bin/activate
+          if [ ! -f "$GOLDEN" ] || [ ! -f "$PREDICTIONS" ]; then
+            echo "::notice::$GOLDEN or $PREDICTIONS not committed yet; skipping the F1 regression gate"
+            exit 0
+          fi
+          baseline_args=()
+          if [ -f "$F1_BASELINE" ]; then baseline_args=(--baseline "$F1_BASELINE" --max-drop 0.02); fi
+          python python/evaluation/evaluate_f1.py --pred "$PREDICTIONS" --truth "$GOLDEN" \
+            --out-csv results/f1.csv --out-json results/f1.json "${baseline_args[@]}"
+
+      - name: Benchmark smoke run (offline corpus, no LLM)
+        run: |
+          source .venv/bin/activate
+          python benchmarks/run_benchmark.py --offline-corpus --skip-llm --grpc --n 100
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: evaluation-results
+          path: results/
+          if-no-files-found: ignore
+
+  typescript:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: integrations/vercel-ai-sdk
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Build engine server for live tests
+        working-directory: .
+        run: cargo build --release -p grpc-server
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: integrations/vercel-ai-sdk/.nvmrc
+          cache: npm
+          cache-dependency-path: integrations/vercel-ai-sdk/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: npx tsc --noEmit
+      - run: npm test
