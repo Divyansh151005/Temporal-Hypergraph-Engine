@@ -27,11 +27,12 @@ pub struct WalWriter {
 
 /// Fsyncs a directory so that file creations and renames inside it are durable.
 pub(crate) fn sync_dir(dir: &Path) -> io::Result<()> {
-    #[cfg(unix)]
+    #[cfg(all(unix, not(miri)))]
     {
         File::open(dir)?.sync_all()
     }
-    #[cfg(not(unix))]
+    // Miri cannot fsync directory descriptors; durability is not what it checks.
+    #[cfg(any(not(unix), miri))]
     {
         let _ = dir;
         Ok(())
