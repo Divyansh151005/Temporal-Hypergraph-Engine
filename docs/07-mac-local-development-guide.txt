@@ -1,0 +1,101 @@
+```text
+# ==============================================================================
+# DOCUMENT SPECIFICATION: docs/07-mac-local-development-guide.txt
+# ENGINE MODULE: Cross-Platform Execution, Mocking, and Cloud GPU Deployment
+# LANGUAGE/TARGET: Python (PyTorch CPU/CUDA Fallbacks) + Cursor IDE SSH
+# ==============================================================================
+
+[SYSTEM ROLE FOR AGENT]
+You are an expert DevOps and Systems Infrastructure Architect. This document outlines the exact development protocol for building, mocking, and testing a CUDA-dependent Rust/Python architecture (specifically the vLLM KV Offloader) locally on an Apple Silicon Mac, followed by final deployment to a Linux/NVIDIA cloud instance. 
+
+--------------------------------------------------------------------------------
+1. ARCHITECTURAL CHALLENGE & STRATEGY
+--------------------------------------------------------------------------------
+
+The Temporal Hypergraph Engine relies heavily on CUDA pinned memory (`cudaMemcpyAsync`) and vLLM integration for its secondary KV-cache tier (as specified in `docs/04-vllm-kv-offloader.txt`). 
+
+Apple Silicon (M-series Macs) utilizes Unified Memory and the Metal API, meaning native CUDA drivers and vLLM memory management are entirely unavailable locally. 
+
+To prevent development bottlenecks, the agent MUST implement a 3-Stage Development Strategy:
+1. Hardware-Agnostic Fallbacks: Code dynamically detects hardware and switches between CUDA and CPU tensors.
+2. Mock Data Generation: Synthetic KV tensors replace the need for running a heavy 8B+ parameter LLM locally.
+3. Remote SSH Execution: The final integration test is pushed via Cursor SSH to a scalable cloud GPU.
+
+--------------------------------------------------------------------------------
+2. HARDWARE-AGNOSTIC FALLBACK PROTOCOL
+--------------------------------------------------------------------------------
+
+All Python bridging code that interacts with the Rust memory engine MUST include conditional hardware checks.
+
+2.1 Implementation Rule (`python/hypergraph_offloader/connector.py`)
+```python
+import torch
+
+class HypergraphKVOffloader:
+    def __init__(self, rust_engine_handle):
+        self.engine = rust_engine_handle
+        # Dynamic Hardware Detection
+        self.has_cuda = torch.cuda.is_available()
+        
+    def offload_kv_block(self, key_tensor: torch.Tensor, value_tensor: torch.Tensor, hyperedge_id: str) -> bool:
+        kv_combined = torch.stack([key_tensor, value_tensor], dim=0)
+        
+        if self.has_cuda:
+            # NVIDIA Route (Production)
+            staging_memory = kv_combined.to("cpu", non_blocking=True)
+            torch.cuda.synchronize()
+        else:
+            # MAC LOCAL DEV ROUTE (Fallback)
+            # Ensure tensor is strictly contiguous in CPU RAM for the Rust FFI pointer
+            staging_memory = kv_combined.cpu().contiguous()
+            
+        raw_ptr = staging_memory.data_ptr()
+        num_bytes = staging_memory.numel() * staging_memory.element_size()
+        
+        return self.engine.store_kv_block_raw(..., raw_ptr, num_bytes, hyperedge_id)
+
+```
+
+---
+
+3. MOCK TENSOR GENERATION (LOCAL TESTING)
+
+---
+
+To test the throughput and zero-copy capabilities of the Rust engine on the Mac without a local LLM, implement a mock testing harness.
+
+3.1 Mock Tensor Script (`tests/mock_kv_generator.py`)
+The agent must generate a script that mimics vLLM's PagedAttention block structures:
+
+* Generate random FP16/BF16 tensors of shape `[2, 32, 16, 32, 128]` (representing Key/Value, Layers, Block Size, Heads, Head Dim).
+* File size per block should equal exactly 8,388,608 bytes (8 MB).
+* Loop 1,000 times (simulating 8GB of context history) and feed the pointers directly into the PyO3 Rust FFI to benchmark memory I/O speed.
+
+---
+
+4. CLOUD GPU EXECUTION (CURSOR REMOTE SSH)
+
+---
+
+Once the local Mac tests (Miri, Loom, PyO3 Python tests, Mock Tensors) pass with 100% success, the system is ready for the real vLLM integration test.
+
+4.1 Deployment Steps for the Developer
+
+1. Provision a cheap Linux/NVIDIA GPU instance (e.g., RunPod RTX 4090 / A6000, Lambda Labs, AWS EC2 G5).
+2. Ensure the instance uses an Ubuntu image with Docker, CUDA Toolkit 12.1+, and Python 3.10+.
+3. Open Cursor on the Mac.
+4. Open the Command Palette (`Cmd + Shift + P`), type `Remote-SSH: Connect to Host...`.
+5. Enter the SSH string provided by the cloud host (e.g., `ssh root@192.168.x.x -p 22`).
+6. Cursor will install its remote server on the GPU. The developer can now use Cursor's AI coding tools exactly as they did on the Mac, but all `cargo run` and `python` commands will execute on the NVIDIA machine.
+
+---
+
+5. END CHECKLIST & VICTORY CRITERIA
+
+---
+
+[ ] `torch.cuda.is_available()` is heavily utilized to prevent `NotImplementedError` or `CUDA error` crashes on the Mac.
+[ ] Fallback routines guarantee that CPU tensors are `.contiguous()` before their raw pointers are passed to the Rust C-FFI.
+[ ] `mock_kv_generator.py` successfully generates 8MB chunks of FP16 memory and stores them in the Rust engine without a real LLM.
+[ ] The workspace is fully portable and can be cloned onto a RunPod/Linux instance via SSH without altering the core Rust logic.
+

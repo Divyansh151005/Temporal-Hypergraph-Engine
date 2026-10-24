@@ -1,0 +1,179 @@
+```text
+# ==============================================================================
+# DOCUMENT SPECIFICATION: docs/06-test-and-validation-plan.txt
+# ENGINE MODULE: Test Infrastructure, Property-Based Fuzzing & Chaos Recovery
+# LANGUAGE/TARGET: Rust (Cargo Test / Loom / Miri) + Shell/Python Chaos Harness
+# ==============================================================================
+
+[SYSTEM ROLE FOR AGENT]
+You are an expert Systems QA Architect and Chaos Engineering Specialist. Implement the automated testing suite, property-based fuzzers, memory alignment validators, and crash recovery test harnesses described in this document. Ensure the temporal hypergraph engine guarantees zero memory corruption, zero data loss on committed transactions, and complete thread safety under extreme concurrency.
+
+--------------------------------------------------------------------------------
+1. ARCHITECTURAL OVERVIEW & TEST STRATEGY
+--------------------------------------------------------------------------------
+
+The Temporal Hypergraph Engine operates in safety-critical, high-concurrency environments (e.g., real-time LLM memory retrieval and secondary KV-cache offloading). Standard unit tests are insufficient to guarantee industrial-grade reliability.
+
+This module defines a 4-Layer Validation Pyramid:
+1. Layer 1: Undefined Behavior & Memory Alignment Verification (`cargo miri`).
+2. Layer 2: Lock-Free Concurrency & Model-Checking Fuzzing (`cargo loom`).
+3. Layer 3: Property-Based Data Invariant Testing (`proptest` / `cargo-fuzz`).
+4. Layer 4: Fault Injection & Chaos Crash Recovery (`SIGKILL`, corrupted WAL frames).
+
+--------------------------------------------------------------------------------
+2. MEMORY SAFETY & CONCURRENCY FUZZING
+--------------------------------------------------------------------------------
+
+2.1 Miri Memory Safety Auditing
+- Run `cargo miri test` across all internal unsafe code blocks (`bytemuck` casts, raw pointer dereferences in zero-copy KV offloader).
+- Miri flags any pointer aliasing violations, out-of-bounds pointer arithmetic, or unaligned memory accesses.
+- Target: Zero Strict Provenance violations or UB warnings under Miri execution.
+
+2.2 Loom Concurrency Model Checking
+- Loom replaces Rust standard library primitives (`AtomicU32`, `Arc`, `Mutex`) with instrumented versions to exhaustively explore all possible thread interleavings.
+- Test Scope: Lock-free read snapshot atomic swaps (`ArcSwap`) during concurrent non-blocking writes.
+
+Code Pattern Blueprint for Loom Test (`tests/loom_suite.rs`):
+
+```rust
+#[cfg(loom)]
+mod loom_tests {
+    use loom::sync::Arc;
+    use loom::thread;
+
+    #[test]
+    fn test_concurrent_snapshot_swap() {
+        loom::model(|| {
+            let engine = Arc::new(ConcurrentHypergraphEngine::new_test());
+            
+            let writer = {
+                let engine = engine.clone();
+                thread::spawn(move || {
+                    let _ = engine.insert_hyperedge_raw(
+                        "TEST_EVENT", 
+                        &["node_a", "node_b"], 
+                        1000, 
+                        None, 
+                        &[0.1f32; 128]
+                    );
+                })
+            };
+
+            let reader = {
+                let engine = engine.clone();
+                thread::spawn(move || {
+                    let snapshot = engine.graph_snapshot.load();
+                    assert!(snapshot.nodes.len() >= 0);
+                })
+            };
+
+            writer.join().unwrap();
+            reader.join().unwrap();
+        });
+    }
+}
+
+```
+
+---
+
+3. FAULT INJECTION & CHAOS RECOVERY PROTOCOL
+
+---
+
+To guarantee durability, the engine must survive random power loss, process termination, or kernel crashes without state corruption.
+
+3.1 WAL Frame Corruption Injections
+
+* Test Harness: `tests/chaos_wal_corruptor.rs`
+* Injects byte-level corruptions at random offsets in active `.wal` files prior to engine boot:
+1. Magic Header Mutation: Modify `b"THG1"` -> `b"THG9"`.
+2. Payload Corruption: Mutilate binary payload bytes while leaving header valid (triggering CRC32 mismatch).
+3. Truncated Writes: Truncate file mid-frame to simulate power failure during write.
+
+
+
+Acceptance Rule:
+The engine recovery parser MUST detect CRC32 mismatches, halt WAL replay cleanly at the last uncorrupted frame, discard partial trailing frames, and log an alert without panicking or throwing segfaults.
+
+3.2 SIGKILL Mid-Flush Stress Test
+
+* Test Harness: `tests/chaos_sigkill_harness.py`
+* Protocol:
+1. Spawn engine process inserting 1,000,000 hyperedges at 50,000 ops/sec.
+2. At random intervals (between 100ms and 5000ms), issue a `SIGKILL` (`kill -9`) to the running process.
+3. Re-open storage directory with engine restart routines.
+4. Verify:
+* All sequence IDs in index match monotonic contiguous sequence up to last committed CRC32 frame.
+* Zero orphan nodes or unlinked hyperedge references in `BipartiteArena`.
+
+
+
+
+
+---
+
+4. LONGEVITY & STRESS BENCHMARKS
+
+---
+
+4.1 Memory Leak & Heap Fragmentation Test
+
+* Run 100,000,000 insert and soft-delete cycles using Valgrind / `heaptrack`.
+* Resident Set Size (RSS) memory ceiling must flatten after arena allocations reach steady state.
+* Target: RSS memory drift over 24-hour continuous write execution < 0.01%.
+
+4.2 Scale Capacity Validation
+
+* Populate engine with 100,000,000 hyperedges containing 8 node participants each.
+* Execute 3-hop traversal queries across the 100M edge graph under load.
+* Target: Latency remains under 2.5 ms (p99).
+
+---
+
+5. CONTINUOUS INTEGRATION (CI) AUTOMATION PIPELINE
+
+---
+
+```yaml
+# .github/workflows/engine-validation.yml
+name: Core Engine QA Pipeline
+on: [push, pull_request]
+
+jobs:
+  memory-safety:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install Rust Nightly
+        run: rustup toolchain install nightly --component miri
+      - name: Run Miri Tests
+        run: cargo +nightly miri test
+
+  concurrency-loom:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run Loom Model Checker
+        run: RUSTFLAGS="--cfg loom" cargo test --test loom_suite --release
+
+  chaos-fuzzing:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run WAL Crash Recovery Chaos Test
+        run: cargo test --test chaos_recovery -- --nocapture
+
+```
+
+---
+
+6. END CHECKLIST & VICTORY CRITERIA
+
+---
+
+[ ] `cargo miri test` runs with zero undefined behavior or pointer alignment warnings.
+[ ] `cargo loom` verifies all thread interleavings without deadlock or race condition reports.
+[ ] WAL crash recovery successfully handles corrupted frames, bit flips, and truncated headers.
+[ ] SIGKILL harness proves zero data loss for committed sequence frames across 100 test runs.
+[ ] 24-hour endurance test proves steady RSS memory usage with zero heap leaks.
