@@ -1,5 +1,5 @@
 {
-  "name": "@hypergraph/sdk",
+  "name": "@temporal-hypergraph/sdk",
   "version": "1.0.0",
   "description": "TypeScript client and Vercel AI SDK memory for the Temporal Hypergraph Engine",
   "license": "MIT OR Apache-2.0",

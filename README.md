@@ -41,7 +41,7 @@ from llama_index_hypergraph import TemporalHypergraph; memory = TemporalHypergra
 **TypeScript (Vercel AI SDK)**
 
 ```ts
-import { TemporalHypergraph } from "@hypergraph/sdk"; const memory = new TemporalHypergraph({ apiKey: "your_key" });
+import { TemporalHypergraph } from "@temporal-hypergraph/sdk"; const memory = new TemporalHypergraph({ apiKey: "your_key" });
 ```
 
 **In-process, no server (PyO3)**

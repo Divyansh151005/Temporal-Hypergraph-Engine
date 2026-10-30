@@ -21,9 +21,9 @@ categories = ["database-implementations", "data-structures", "science"]
 rust-version = "1.80"
 
 [workspace.dependencies]
-temporal-math = { path = "crates/temporal-math" }
-engine-core = { path = "crates/engine-core" }
-vllm-kv-store = { path = "crates/vllm-kv-store" }
+temporal-math = { version = "1.0.0", path = "crates/temporal-math" }
+engine-core = { version = "1.0.0", path = "crates/engine-core" }
+vllm-kv-store = { version = "1.0.0", path = "crates/vllm-kv-store" }
 
 arc-swap = "1.7"
 blake3 = { version = "1.5", features = ["rayon"] }

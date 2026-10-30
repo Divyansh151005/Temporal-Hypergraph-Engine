@@ -1,20 +1,20 @@
-# @hypergraph/sdk
+# @temporal-hypergraph/sdk
 
 TypeScript client and Vercel AI SDK memory for the Temporal Hypergraph Engine.
 
 ```bash
-npm install @hypergraph/sdk ai zod
+npm install @temporal-hypergraph/sdk ai zod
 ```
 
 ```ts
-import { TemporalHypergraph } from "@hypergraph/sdk";
+import { TemporalHypergraph } from "@temporal-hypergraph/sdk";
 
 const memory = new TemporalHypergraph({ apiKey: "your_key" }); // session "default"; pass sessionId to change
 ```
 
 ```ts
-import { HypergraphClient } from "@hypergraph/sdk";
-import { hypergraphMemoryMiddleware, hypergraphContextTool, saveMessages } from "@hypergraph/sdk/ai";
+import { HypergraphClient } from "@temporal-hypergraph/sdk";
+import { hypergraphMemoryMiddleware, hypergraphContextTool, saveMessages } from "@temporal-hypergraph/sdk/ai";
 import { streamText, wrapLanguageModel } from "ai";
 
 const client = new HypergraphClient({ apiKey: process.env.HYPERGRAPH_API_KEY });

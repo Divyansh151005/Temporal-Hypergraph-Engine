@@ -1,5 +1,5 @@
 /**
- * Vercel AI SDK adapters: `import { ... } from "@hypergraph/sdk/ai"`.
+ * Vercel AI SDK adapters: `import { ... } from "@temporal-hypergraph/sdk/ai"`.
  *
  * ```ts
  * const model = wrapLanguageModel({
