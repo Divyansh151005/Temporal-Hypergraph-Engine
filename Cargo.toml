@@ -10,10 +10,14 @@ members = [
 ]
 
 [workspace.package]
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
-license = "Apache-2.0"
-repository = "https://github.com/temporal-hypergraph/temporal-hypergraph-engine"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine"
+homepage = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine"
+readme = "README.md"
+keywords = ["hypergraph", "temporal", "rag", "vllm", "database"]
+categories = ["database-implementations", "data-structures", "science"]
 rust-version = "1.80"
 
 [workspace.dependencies]

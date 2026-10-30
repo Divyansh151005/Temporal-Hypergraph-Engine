@@ -1,8 +1,25 @@
 {
   "name": "@hypergraph/sdk",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "TypeScript client and Vercel AI SDK memory for the Temporal Hypergraph Engine",
-  "license": "Apache-2.0",
+  "license": "MIT OR Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Divyansh151005/Temporal-Hypergraph-Engine.git",
+    "directory": "integrations/vercel-ai-sdk"
+  },
+  "homepage": "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine/tree/main/integrations/vercel-ai-sdk#readme",
+  "bugs": {
+    "url": "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine/issues"
+  },
+  "keywords": [
+    "hypergraph",
+    "temporal",
+    "rag",
+    "memory",
+    "vercel-ai-sdk",
+    "grpc"
+  ],
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",

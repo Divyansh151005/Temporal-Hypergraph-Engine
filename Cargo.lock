@@ -466,7 +466,7 @@ checksum = "0e9c71c2167ca323c882b99918929403426e2373ea17242ff5653e0d5e1058be"
 
 [[package]]
 name = "engine-core"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "arc-swap",
  "bytemuck",
@@ -628,7 +628,7 @@ dependencies = [
 
 [[package]]
 name = "grpc-server"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "bytes",
  "criterion",
@@ -1285,7 +1285,7 @@ dependencies = [
 
 [[package]]
 name = "pyo3-bindings"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "engine-core",
  "pyo3",
@@ -1681,7 +1681,7 @@ dependencies = [
 
 [[package]]
 name = "temporal-math"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "bytemuck",
  "criterion",
@@ -1692,7 +1692,7 @@ dependencies = [
 
 [[package]]
 name = "thg-benchmarks"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "crossbeam-channel",
  "engine-core",
@@ -2010,7 +2010,7 @@ checksum = "ba73ea9cf16a25df0c8caa16c51acb937d5712a8429db78a3ee29d5dcacd3a65"
 
 [[package]]
 name = "vllm-kv-store"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "blake3",
  "bytemuck",

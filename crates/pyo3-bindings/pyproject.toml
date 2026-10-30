@@ -6,7 +6,8 @@ build-backend = "maturin"
 name = "hypergraph-engine-native"
 description = "In-process bindings for the Temporal Hypergraph Engine and its vLLM KV block tier"
 requires-python = ">=3.10"
-license = { text = "Apache-2.0" }
+license = { text = "MIT OR Apache-2.0" }
+urls = { Homepage = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine", Repository = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine", Documentation = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine/tree/main/docs" }
 classifiers = [
     "Programming Language :: Rust",
     "Programming Language :: Python :: Implementation :: CPython",

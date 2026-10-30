@@ -4,13 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "langchain-hypergraph"
-version = "0.1.0"
+version = "1.0.0"
 description = "LangChain chat memory and vector store backed by the Temporal Hypergraph Engine"
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "Apache-2.0" }
+license = { text = "MIT OR Apache-2.0" }
+urls = { Homepage = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine", Repository = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine", Documentation = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine/tree/main/integrations/langchain" }
 dependencies = [
-    "hypergraph-client>=0.1.0",
+    "hypergraph-client>=1.0.0",
     "langchain-core>=0.3",
     "typing-extensions>=4.7",
 ]
