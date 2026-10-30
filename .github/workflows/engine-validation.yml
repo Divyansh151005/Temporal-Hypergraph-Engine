@@ -26,22 +26,28 @@ jobs:
 
   memory-safety:
     runs-on: ubuntu-latest
+    # Newer Miri rejects parking_lot_core 0.9's futex call (&AtomicI32 passed as
+    # a *mut u32 vararg). The fix is in parking_lot_core 0.10, which needs Rust
+    # 1.95 and is not yet used by dashmap 6; unpin once both can be upgraded.
+    env:
+      MIRI_TOOLCHAIN: nightly-2025-08-09
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@nightly
+      - uses: dtolnay/rust-toolchain@master
         with:
+          toolchain: ${{ env.MIRI_TOOLCHAIN }}
           components: miri
       - uses: Swatinem/rust-cache@v2
         with:
-          key: miri
+          key: miri-${{ env.MIRI_TOOLCHAIN }}
       - name: Miri with Stacked Borrows (unit tests, including all unsafe pointer code)
         env:
           MIRIFLAGS: -Zmiri-disable-isolation
           PROPTEST_CASES: "4"
           PROPTEST_DISABLE_FAILURE_PERSISTENCE: "1"
         run: |
-          cargo +nightly miri test -p temporal-math -p vllm-kv-store --lib --tests
-          cargo +nightly miri test -p engine-core --lib
+          cargo +$MIRI_TOOLCHAIN miri test -p temporal-math -p vllm-kv-store --lib --tests
+          cargo +$MIRI_TOOLCHAIN miri test -p engine-core --lib
       # crossbeam-epoch (behind crossbeam-skiplist) violates Stacked Borrows in
       # its intrusive list and needs permissive provenance, so the engine-level
       # tests run without the aliasing model; every other UB check still applies.
@@ -52,7 +58,7 @@ jobs:
           MIRIFLAGS: -Zmiri-disable-isolation -Zmiri-disable-stacked-borrows -Zmiri-permissive-provenance -Zmiri-ignore-leaks
           PROPTEST_CASES: "2"
           PROPTEST_DISABLE_FAILURE_PERSISTENCE: "1"
-        run: cargo +nightly miri test -p engine-core --tests
+        run: cargo +$MIRI_TOOLCHAIN miri test -p engine-core --tests
 
   concurrency-loom:
     runs-on: ubuntu-latest
