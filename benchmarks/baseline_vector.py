@@ -68,7 +68,7 @@ class VectorBaseline:
         self.dim = vectors.shape[1]
         if backend == "qdrant":
             self._qdrant = QdrantClient(":memory:")
-            self._qdrant.recreate_collection(
+            self._qdrant.create_collection(
                 COLLECTION, vectors_config=VectorParams(size=self.dim, distance=Distance.COSINE)
             )
             self._qdrant.upsert(
@@ -82,7 +82,7 @@ class VectorBaseline:
 
     def search(self, query: np.ndarray, k: int) -> list[Chunk]:
         if self.backend == "qdrant":
-            hits = self._qdrant.search(COLLECTION, query_vector=query.tolist(), limit=k)
+            hits = self._qdrant.query_points(COLLECTION, query=query.tolist(), limit=k).points
             return [self.chunks[int(h.id)] for h in hits]
         scores = self._matrix @ query.astype(np.float32)
         top = np.argpartition(-scores, min(k, len(scores)) - 1)[:k] if k < len(scores) else np.arange(len(scores))

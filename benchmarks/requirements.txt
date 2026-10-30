@@ -1,4 +1,4 @@
-qdrant-client>=1.7
+qdrant-client>=1.10
 tiktoken>=0.7
 numpy>=1.24
 -e python/evaluation

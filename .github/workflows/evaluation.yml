@@ -33,7 +33,7 @@ jobs:
           source .venv/bin/activate
           pip install --upgrade pip maturin
           (cd crates/pyo3-bindings && maturin develop --release)
-          pip install pytest \
+          pip install pytest pytest-asyncio \
             -e integrations/python-client \
             -e integrations/langchain \
             -e integrations/llamaindex \
