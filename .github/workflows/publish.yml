@@ -23,6 +23,9 @@ permissions:
 env:
   CARGO_TERM_COLOR: always
   MATURIN_DIR: crates/pyo3-bindings
+  # Must stay within the CPython range supported by the pinned PyO3 (0.22:
+  # up to 3.13). Runners ship newer interpreters, so --find-interpreter breaks.
+  PYTHON_INTERPRETERS: python3.10 python3.11 python3.12 python3.13
 
 jobs:
   linux:
@@ -37,35 +40,34 @@ jobs:
           working-directory: ${{ env.MATURIN_DIR }}
           target: ${{ matrix.target }}
           manylinux: auto
-          args: --release --out dist --find-interpreter
+          args: --release --out dist --interpreter ${{ env.PYTHON_INTERPRETERS }}
       - uses: actions/upload-artifact@v4
         with:
           name: wheels-linux-${{ matrix.target }}
           path: ${{ env.MATURIN_DIR }}/dist
 
   windows:
+    # Windows interpreters are not exposed as pythonX.Y, so build one
+    # version per job against the `python` that setup-python puts on PATH.
     runs-on: windows-latest
     strategy:
       matrix:
         target: [x64]
+        python: ["3.10", "3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: |
-            3.10
-            3.11
-            3.12
-            3.13
+          python-version: ${{ matrix.python }}
           architecture: ${{ matrix.target }}
       - uses: PyO3/maturin-action@v1
         with:
           working-directory: ${{ env.MATURIN_DIR }}
           target: ${{ matrix.target }}
-          args: --release --out dist --find-interpreter
+          args: --release --out dist --interpreter python
       - uses: actions/upload-artifact@v4
         with:
-          name: wheels-windows-${{ matrix.target }}
+          name: wheels-windows-${{ matrix.target }}-py${{ matrix.python }}
           path: ${{ env.MATURIN_DIR }}/dist
 
   macos:
@@ -88,7 +90,7 @@ jobs:
         with:
           working-directory: ${{ env.MATURIN_DIR }}
           target: ${{ matrix.target }}
-          args: --release --out dist --find-interpreter
+          args: --release --out dist --interpreter ${{ env.PYTHON_INTERPRETERS }}
       - uses: actions/upload-artifact@v4
         with:
           name: wheels-macos-${{ matrix.target }}
@@ -138,9 +140,6 @@ jobs:
     environment:
       name: npm
       url: https://www.npmjs.com/package/@temporal-hypergraph/sdk
-    permissions:
-      contents: read
-      id-token: write
     defaults:
       run:
         working-directory: integrations/vercel-ai-sdk
@@ -163,7 +162,9 @@ jobs:
       - run: npm run typecheck
       - run: npm run build
       - run: npm test
-      # Scoped packages default to restricted access.
-      - run: npm publish --access public --provenance
+      # Scoped packages default to restricted access. Add --provenance (and
+      # id-token: write) once the repository is public; npm rejects it for
+      # private source repositories.
+      - run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
