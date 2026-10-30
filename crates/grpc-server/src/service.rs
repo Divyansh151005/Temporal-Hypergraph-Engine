@@ -217,9 +217,9 @@ impl HypergraphEngineService for HypergraphService {
             let finished = next.is_none();
             if let Some(message) = next {
                 let index = processed;
-                processed = processed
-                    .checked_add(1)
-                    .ok_or_else(|| Status::invalid_argument("too many items in one batch stream"))?;
+                processed = processed.checked_add(1).ok_or_else(|| {
+                    Status::invalid_argument("too many items in one batch stream")
+                })?;
                 match message
                     .hyperedge
                     .ok_or_else(|| Status::invalid_argument("hyperedge is required"))

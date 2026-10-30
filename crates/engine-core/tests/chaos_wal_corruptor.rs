@@ -263,7 +263,10 @@ fn assert_recovered_state(engine: &ConcurrentHypergraphEngine, kept: usize, cont
 }
 
 #[test]
-#[cfg_attr(miri, ignore = "boots the engine once per frame x fault; hours under the interpreter")]
+#[cfg_attr(
+    miri,
+    ignore = "boots the engine once per frame x fault; hours under the interpreter"
+)]
 fn exhaustive_sweep_every_frame_every_fault() {
     let fixture = Fixture::build();
     let mut cases = 0;
