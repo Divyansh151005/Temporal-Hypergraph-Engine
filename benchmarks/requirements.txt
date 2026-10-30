@@ -1,5 +1,10 @@
 qdrant-client>=1.10
 tiktoken>=0.7
 numpy>=1.24
+networkx>=3.2
+faiss-cpu>=1.8
+# 3.5+ pulls a newer torch than the offloader's torch 2.1 pin
+sentence-transformers>=3.0,<3.5
+matplotlib>=3.7
 -e python/evaluation
 -e integrations/python-client

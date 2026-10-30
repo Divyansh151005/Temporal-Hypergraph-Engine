@@ -19,6 +19,7 @@ dependencies = [
 
 [project.optional-dependencies]
 test = ["pytest>=7"]
+bench = ["networkx>=3.2", "faiss-cpu>=1.8", "sentence-transformers>=3.0,<3.5", "tiktoken>=0.7", "qdrant-client>=1.10"]
 
 [tool.setuptools]
 packages = ["hypergraph_evaluation", "hypergraph_evaluation.schema"]

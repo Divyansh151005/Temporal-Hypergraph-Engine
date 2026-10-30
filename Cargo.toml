@@ -6,6 +6,7 @@ members = [
     "crates/vllm-kv-store",
     "crates/grpc-server",
     "crates/pyo3-bindings",
+    "benchmarks",
 ]
 
 [workspace.package]
