@@ -10,7 +10,7 @@ members = [
 ]
 
 [workspace.package]
-version = "1.0.1"
+version = "2.0.0"
 edition = "2021"
 license = "SSPL-1.0"
 repository = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine"
@@ -21,9 +21,9 @@ categories = ["database-implementations", "data-structures", "science"]
 rust-version = "1.80"
 
 [workspace.dependencies]
-temporal-math = { version = "1.0.1", path = "crates/temporal-math" }
-engine-core = { version = "1.0.1", path = "crates/engine-core" }
-vllm-kv-store = { version = "1.0.1", path = "crates/vllm-kv-store" }
+temporal-math = { version = "2.0.0", path = "crates/temporal-math" }
+engine-core = { version = "2.0.0", path = "crates/engine-core" }
+vllm-kv-store = { version = "2.0.0", path = "crates/vllm-kv-store" }
 
 arc-swap = "1.7"
 blake3 = { version = "1.5", features = ["rayon"] }
