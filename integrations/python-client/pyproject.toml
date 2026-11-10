@@ -9,6 +9,7 @@ description = "Python gRPC client for the Temporal Hypergraph Engine: point-in-t
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "SSPL-1.0" }
+classifiers = ["License :: Other/Proprietary License"]
 keywords = ["hypergraph", "temporal-graph", "graph-database", "grpc", "rag", "llm-memory", "knowledge-graph"]
 urls = { Homepage = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine", Repository = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine", Documentation = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine/tree/main/integrations/python-client", Issues = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine/issues" }
 dependencies = [

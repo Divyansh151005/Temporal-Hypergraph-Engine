@@ -19,6 +19,7 @@ RUN cargo build --release --locked -p grpc-server --bin hypergraph-server \
     && strip target/release/hypergraph-server
 
 FROM debian:bookworm-slim
+LABEL org.opencontainers.image.licenses="SSPL-1.0"
 RUN useradd --system --uid 10001 --home-dir /data hypergraph \
     && mkdir -p /data \
     && chown hypergraph /data
