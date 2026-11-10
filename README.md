@@ -189,6 +189,16 @@ On macOS, see the [local development guide](docs/07-mac-local-development-guide.
 
 ## License
 
-Licensed under either of [Apache License, Version 2.0](LICENSE-APACHE) or [MIT license](LICENSE-MIT), at your option.
+Temporal Hypergraph Engine is licensed under the [Server Side Public License, version 1](LICENSE) (SSPL-1.0).
 
-Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in this project by you, as defined in the Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions.
+**What this means in practice:**
+
+- **Free to use and modify inside your own applications.** You can run the engine, embed it in your products and internal systems, and change the source without paying for a license.
+- **No managed-service offerings by third parties without open-sourcing the whole service.** If you offer the engine, or a modified version of it, to others as a hosted or managed service, Section 13 of the SSPL requires you to release the source code of your entire service stack under the SSPL. That stack includes your management, user-interface, API, automation, monitoring, backup and storage software. In practice this rules out reselling the database as a managed cloud service.
+- **Distributing modified versions** of the engine requires making their source available under the SSPL.
+
+The SSPL is not an OSI-approved open source license. This summary is for convenience only; the [license text](LICENSE) governs. For commercial or managed-service licensing, contact the maintainers.
+
+Versions 1.0.1 and earlier were published under `MIT OR Apache-2.0`, and copies obtained under those terms remain available under them.
+
+Contributions intentionally submitted for inclusion in this project are licensed under the SSPL-1.0.

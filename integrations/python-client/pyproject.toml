@@ -8,7 +8,7 @@ version = "1.0.1"
 description = "gRPC client for the Temporal Hypergraph Engine (shared by the LangChain and LlamaIndex integrations)"
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "MIT OR Apache-2.0" }
+license = { text = "SSPL-1.0" }
 urls = { Homepage = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine", Repository = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine", Documentation = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine/tree/main/integrations/python-client" }
 dependencies = [
     "grpcio>=1.76",

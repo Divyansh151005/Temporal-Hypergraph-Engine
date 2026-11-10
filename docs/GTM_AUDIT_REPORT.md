@@ -25,7 +25,7 @@ Status legend: **Done** (shipped and verified), **Partial** (shipped with a gap)
 
 | Planned | Status | Evidence |
 |---|---|---|
-| Open-source core under Apache-2.0 or MIT | Done | Dual `MIT OR Apache-2.0` in `Cargo.toml`, every `pyproject.toml`, `package.json`, `LICENSE-APACHE`, `LICENSE-MIT`, and on PyPI metadata. GitHub's license detector shows only "Apache 2.0" (cosmetic). |
+| Open-source core under Apache-2.0 or MIT | Superseded | At audit time, `MIT OR Apache-2.0` appeared everywhere (manifests, `LICENSE-APACHE`, `LICENSE-MIT`, PyPI metadata). The project has since moved to SSPL-1.0 (`LICENSE`), which is source-available but not OSI-approved. v1.0.0 and v1.0.1 as already published remain under MIT/Apache. |
 | Official LangChain plugin | Partial | `langchain-hypergraph` provides `TemporalHypergraphMemory` (`BaseChatMessageHistory`), `TemporalHypergraph`, and `TemporalHypergraphVectorStore`. Tested in CI. **Not on PyPI (404).** |
 | Official LlamaIndex plugin | Partial | `llama-index-hypergraph` provides `TemporalHypergraphChatMemory`, `TemporalHypergraphRetriever` and an embedder adapter. Tested in CI. **Not on PyPI (404).** |
 | Official Vercel AI SDK plugin | Done | `@temporal-hypergraph/sdk@1.0.1` is on npm, with dual ESM/CJS builds and an `/ai` subpath. Verified that `new TemporalHypergraph({ apiKey })` constructs from a clean install. |

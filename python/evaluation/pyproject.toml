@@ -7,7 +7,7 @@ name = "hypergraph-evaluation"
 version = "1.0.0"
 description = "Synthetic data generation, extraction and F1 evaluation for the Temporal Hypergraph Engine"
 requires-python = ">=3.10"
-license = { text = "MIT OR Apache-2.0" }
+license = { text = "SSPL-1.0" }
 urls = { Homepage = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine", Repository = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine", Documentation = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine/blob/main/docs/05-extraction-benchmarks.txt" }
 dependencies = [
     "numpy>=1.24",

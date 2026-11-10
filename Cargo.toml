@@ -12,7 +12,7 @@ members = [
 [workspace.package]
 version = "1.0.1"
 edition = "2021"
-license = "MIT OR Apache-2.0"
+license = "SSPL-1.0"
 repository = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine"
 homepage = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine"
 readme = "README.md"

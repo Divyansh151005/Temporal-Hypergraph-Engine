@@ -8,7 +8,7 @@ version = "1.0.1"
 description = "LlamaIndex retriever and chat memory backed by the Temporal Hypergraph Engine"
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "MIT OR Apache-2.0" }
+license = { text = "SSPL-1.0" }
 urls = { Homepage = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine", Repository = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine", Documentation = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine/tree/main/integrations/llamaindex" }
 dependencies = [
     "hypergraph-client>=1.0.1",

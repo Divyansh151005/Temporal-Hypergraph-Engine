@@ -36,7 +36,7 @@ mkdir -p "$STAGE_DIR"
 cp "$JOB_DIR/kernel-metadata.json" "$STAGE_DIR/"
 # Only the Cargo workspace and the Python offloader are needed to build and test.
 git -C "$ROOT" archive --format=tar.gz -o "$STAGE_DIR/source.tar.gz" "$SOURCE_REF" \
-  Cargo.toml Cargo.lock rust-toolchain.toml README.md LICENSE-APACHE LICENSE-MIT \
+  Cargo.toml Cargo.lock rust-toolchain.toml README.md LICENSE \
   crates benchmarks proto python
 python3 - "$JOB_DIR/main.py" "$JOB_DIR/run_vllm_test.py" "$STAGE_DIR/source.tar.gz" "$STAGE_DIR/main.py" <<'EOF'
 import base64, pathlib, sys
