@@ -4,12 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hypergraph-client"
-version = "2.0.0"
-description = "gRPC client for the Temporal Hypergraph Engine (shared by the LangChain and LlamaIndex integrations)"
+version = "2.0.1"
+description = "Python gRPC client for the Temporal Hypergraph Engine: point-in-time multi-hop retrieval that never serves stale facts"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "SSPL-1.0" }
-urls = { Homepage = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine", Repository = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine", Documentation = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine/tree/main/integrations/python-client" }
+keywords = ["hypergraph", "temporal-graph", "graph-database", "grpc", "rag", "llm-memory", "knowledge-graph"]
+urls = { Homepage = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine", Repository = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine", Documentation = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine/tree/main/integrations/python-client", Issues = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine/issues" }
 dependencies = [
     "grpcio>=1.76",
     "protobuf>=6.31.1",

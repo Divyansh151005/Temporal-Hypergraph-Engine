@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hypergraph-evaluation"
-version = "2.0.0"
+version = "2.0.1"
 description = "Synthetic data generation, extraction and F1 evaluation for the Temporal Hypergraph Engine"
 requires-python = ">=3.10"
 license = { text = "SSPL-1.0" }

@@ -4,13 +4,29 @@ build-backend = "maturin"
 
 [project]
 name = "hypergraph-engine-native"
-description = "In-process bindings for the Temporal Hypergraph Engine and its vLLM KV block tier"
+description = "In-process Rust bindings for the Temporal Hypergraph Engine: lock-free temporal hypergraph storage and a zero-copy KV-cache block store for vLLM"
+readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.10"
 license = { text = "SSPL-1.0" }
-urls = { Homepage = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine", Repository = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine", Documentation = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine/tree/main/docs" }
+keywords = ["hypergraph", "temporal-graph", "graph-database", "rust", "pyo3", "vllm", "kv-cache", "rag", "lock-free"]
+urls = { Homepage = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine", Repository = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine", Documentation = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine/tree/main/docs", Issues = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine/issues" }
 classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: Other/Proprietary License",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
     "Programming Language :: Rust",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: Implementation :: CPython",
+    "Topic :: Database :: Database Engines/Servers",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 dynamic = ["version"]
 

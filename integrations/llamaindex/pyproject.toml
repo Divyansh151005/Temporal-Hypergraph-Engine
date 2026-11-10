@@ -4,12 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llama-index-hypergraph"
-version = "2.0.0"
-description = "LlamaIndex retriever and chat memory backed by the Temporal Hypergraph Engine"
+version = "2.0.1"
+description = "LlamaIndex retriever and chat memory on the Temporal Hypergraph Engine: time-aware multi-hop context with zero stale facts"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "SSPL-1.0" }
-urls = { Homepage = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine", Repository = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine", Documentation = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine/tree/main/integrations/llamaindex" }
+keywords = ["llama-index", "llamaindex", "hypergraph", "temporal-graph", "graph-database", "rag", "llm-memory"]
+urls = { Homepage = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine", Repository = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine", Documentation = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine/tree/main/integrations/llamaindex", Issues = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine/issues" }
 dependencies = [
     "hypergraph-client>=2.0.0,<3",
     "llama-index-core>=0.14",

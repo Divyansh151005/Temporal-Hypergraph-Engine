@@ -1,7 +1,7 @@
 {
   "name": "@temporal-hypergraph/sdk",
-  "version": "2.0.0",
-  "description": "TypeScript client and Vercel AI SDK memory for the Temporal Hypergraph Engine",
+  "version": "2.0.1",
+  "description": "TypeScript gRPC client and Vercel AI SDK memory for the Temporal Hypergraph Engine, a lock-free Rust temporal hypergraph database for point-in-time, multi-hop RAG",
   "license": "SSPL-1.0",
   "repository": {
     "type": "git",
@@ -15,8 +15,16 @@
   "keywords": [
     "hypergraph",
     "temporal",
+    "temporal-graph",
+    "graph-database",
+    "knowledge-graph",
+    "rust",
+    "cuda",
+    "vllm",
+    "lock-free",
     "rag",
     "memory",
+    "llm-memory",
     "vercel-ai-sdk",
     "grpc"
   ],

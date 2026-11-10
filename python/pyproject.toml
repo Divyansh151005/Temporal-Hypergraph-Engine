@@ -4,12 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hypergraph-offloader"
-version = "2.0.0"
-description = "KV-cache block offloader backed by the Temporal Hypergraph Engine"
+version = "2.0.1"
+description = "Zero-copy KV-cache block offloader for PyTorch and vLLM, backed by the Temporal Hypergraph Engine (verified bit-exact on CUDA)"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "SSPL-1.0" }
-urls = { Homepage = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine", Repository = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine", Documentation = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine/blob/main/docs/04-vllm-kv-offloader.txt" }
+keywords = ["vllm", "kv-cache", "cuda", "pytorch", "llm-inference", "offloading", "hypergraph"]
+urls = { Homepage = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine", Repository = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine", Documentation = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine/blob/main/docs/04-vllm-kv-offloader.txt", Issues = "https://github.com/Divyansh151005/Temporal-Hypergraph-Engine/issues" }
 dependencies = [
     "numpy>=1.24",
     "torch>=2.1",
