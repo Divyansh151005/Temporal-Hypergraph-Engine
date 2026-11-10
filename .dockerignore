@@ -1,0 +1,27 @@
+.git
+.github
+.cache
+.venv
+.pytest_cache
+.ruff_cache
+**/target
+**/node_modules
+**/__pycache__
+**/*.pyc
+build
+results
+datasets
+logs
+kaggle_gpu_job
+kaggle_output
+Research Papers
+docs
+integrations
+python
+tests
+scripts
+*.md
+!README.md
+.env
+.env.*
+.DS_Store

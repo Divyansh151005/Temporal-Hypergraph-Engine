@@ -1,0 +1,467 @@
+{
+  "benchmark": "concurrency_scaling",
+  "environment": {
+    "cpu": "Apple M3",
+    "logical_cores": 8,
+    "memory_bytes": 8589934592,
+    "os": "macos aarch64",
+    "rustc": "rustc 1.91.1 (ed61e7d7e 2025-11-07) (Homebrew)",
+    "git_sha": "efd737f-dirty",
+    "profile": "release",
+    "started_at": 1793370356
+  },
+  "config": {
+    "duration_secs": 10.0,
+    "hops": 3,
+    "limit": 1024,
+    "nodes": 100000,
+    "preload": 1000000,
+    "readers": [
+      1,
+      8,
+      16,
+      32,
+      64
+    ],
+    "seed": 7,
+    "skew": 1.0,
+    "warmup_secs": 2.0,
+    "writer_batch": 1024,
+    "writer_rate": 10000
+  },
+  "timer_overhead_ns": 41.0,
+  "results": [
+    {
+      "scenario": "arcswap_readers_only",
+      "readers": 1,
+      "active_cores": 1,
+      "duration_secs": 10.007742375,
+      "reads": 40434,
+      "reads_per_sec": 4040.271870008045,
+      "reads_per_sec_per_core": 4040.271870008045,
+      "mean_edges_per_read": 1024.0,
+      "read_latency": {
+        "count": 40434,
+        "mean_us": 247.29087401691604,
+        "p50_us": 227.967,
+        "p99_us": 393.215,
+        "p999_us": 585.215,
+        "max_us": 21020.671
+      },
+      "snapshot_acquire_latency": {
+        "count": 40434,
+        "mean_us": 0.03709449967848839,
+        "p50_us": 0.042,
+        "p99_us": 0.125,
+        "p999_us": 0.5,
+        "max_us": 1.791
+      },
+      "snapshot_release_latency": {
+        "count": 40434,
+        "mean_us": 0.03184181629321858,
+        "p50_us": 0.041,
+        "p99_us": 0.042,
+        "p999_us": 0.333,
+        "max_us": 1.417
+      },
+      "writer_edges": 0,
+      "writer_edges_per_sec": 0.0,
+      "writer_publishes": 0,
+      "final_hyperedges": 1000000,
+      "rss_bytes": 305676288
+    },
+    {
+      "scenario": "arcswap_with_writer",
+      "readers": 1,
+      "active_cores": 1,
+      "duration_secs": 10.009002833,
+      "reads": 38225,
+      "reads_per_sec": 3819.0617624735764,
+      "reads_per_sec_per_core": 3819.0617624735764,
+      "mean_edges_per_read": 1024.0,
+      "read_latency": {
+        "count": 38225,
+        "mean_us": 261.6858361805099,
+        "p50_us": 225.663,
+        "p99_us": 409.855,
+        "p999_us": 9748.479,
+        "max_us": 28327.935
+      },
+      "snapshot_acquire_latency": {
+        "count": 38225,
+        "mean_us": 0.041088214519293655,
+        "p50_us": 0.042,
+        "p99_us": 0.167,
+        "p999_us": 0.667,
+        "max_us": 2.459
+      },
+      "snapshot_release_latency": {
+        "count": 38225,
+        "mean_us": 23.85898903858731,
+        "p50_us": 0.041,
+        "p99_us": 0.083,
+        "p999_us": 9215.999,
+        "max_us": 17874.943
+      },
+      "writer_edges": 100352,
+      "writer_edges_per_sec": 10026.17360334201,
+      "writer_publishes": 98,
+      "final_hyperedges": 1120832,
+      "rss_bytes": 503070720
+    },
+    {
+      "scenario": "arcswap_readers_only",
+      "readers": 8,
+      "active_cores": 8,
+      "duration_secs": 10.00374625,
+      "reads": 230020,
+      "reads_per_sec": 22993.386102731263,
+      "reads_per_sec_per_core": 2874.173262841408,
+      "mean_edges_per_read": 1024.0,
+      "read_latency": {
+        "count": 230020,
+        "mean_us": 347.60356560299107,
+        "p50_us": 279.039,
+        "p99_us": 1430.527,
+        "p999_us": 4122.623,
+        "max_us": 25280.511
+      },
+      "snapshot_acquire_latency": {
+        "count": 230020,
+        "mean_us": 0.05355633857925395,
+        "p50_us": 0.042,
+        "p99_us": 0.25,
+        "p999_us": 0.5,
+        "max_us": 111.359
+      },
+      "snapshot_release_latency": {
+        "count": 230020,
+        "mean_us": 0.060843183201460725,
+        "p50_us": 0.042,
+        "p99_us": 0.208,
+        "p999_us": 0.375,
+        "max_us": 599.039
+      },
+      "writer_edges": 0,
+      "writer_edges_per_sec": 0.0,
+      "writer_publishes": 0,
+      "final_hyperedges": 1000000,
+      "rss_bytes": 408616960
+    },
+    {
+      "scenario": "arcswap_with_writer",
+      "readers": 8,
+      "active_cores": 8,
+      "duration_secs": 10.006008042,
+      "reads": 207428,
+      "reads_per_sec": 20730.345121583505,
+      "reads_per_sec_per_core": 2591.293140197938,
+      "mean_edges_per_read": 1024.0,
+      "read_latency": {
+        "count": 207428,
+        "mean_us": 385.60578359719943,
+        "p50_us": 278.783,
+        "p99_us": 1797.119,
+        "p999_us": 7086.079,
+        "max_us": 152043.519
+      },
+      "snapshot_acquire_latency": {
+        "count": 207428,
+        "mean_us": 0.06418443026013848,
+        "p50_us": 0.042,
+        "p99_us": 0.292,
+        "p999_us": 0.584,
+        "max_us": 255.743
+      },
+      "snapshot_release_latency": {
+        "count": 207428,
+        "mean_us": 8.073084607671095,
+        "p50_us": 0.042,
+        "p99_us": 0.25,
+        "p999_us": 0.5,
+        "max_us": 91226.111
+      },
+      "writer_edges": 100352,
+      "writer_edges_per_sec": 10029.174429879997,
+      "writer_publishes": 98,
+      "final_hyperedges": 1120832,
+      "rss_bytes": 566951936
+    },
+    {
+      "scenario": "arcswap_readers_only",
+      "readers": 16,
+      "active_cores": 8,
+      "duration_secs": 10.001640708,
+      "reads": 225514,
+      "reads_per_sec": 22547.70058072756,
+      "reads_per_sec_per_core": 2818.462572590945,
+      "mean_edges_per_read": 1024.0,
+      "read_latency": {
+        "count": 225514,
+        "mean_us": 708.8224291174821,
+        "p50_us": 322.559,
+        "p99_us": 10862.591,
+        "p999_us": 22118.399,
+        "max_us": 70516.735
+      },
+      "snapshot_acquire_latency": {
+        "count": 225514,
+        "mean_us": 0.1208907828338817,
+        "p50_us": 0.042,
+        "p99_us": 0.333,
+        "p999_us": 0.542,
+        "max_us": 13049.855
+      },
+      "snapshot_release_latency": {
+        "count": 225514,
+        "mean_us": 0.07460819283946896,
+        "p50_us": 0.042,
+        "p99_us": 0.25,
+        "p999_us": 0.458,
+        "max_us": 2932.735
+      },
+      "writer_edges": 0,
+      "writer_edges_per_sec": 0.0,
+      "writer_publishes": 0,
+      "final_hyperedges": 1000000,
+      "rss_bytes": 648249344
+    },
+    {
+      "scenario": "arcswap_with_writer",
+      "readers": 16,
+      "active_cores": 8,
+      "duration_secs": 10.008911958,
+      "reads": 206518,
+      "reads_per_sec": 20633.411590251097,
+      "reads_per_sec_per_core": 2579.176448781387,
+      "mean_edges_per_read": 1024.0,
+      "read_latency": {
+        "count": 206518,
+        "mean_us": 774.7493948227282,
+        "p50_us": 287.999,
+        "p99_us": 11804.671,
+        "p999_us": 27787.263,
+        "max_us": 118489.087
+      },
+      "snapshot_acquire_latency": {
+        "count": 206518,
+        "mean_us": 0.26891543110043675,
+        "p50_us": 0.042,
+        "p99_us": 0.375,
+        "p999_us": 0.667,
+        "max_us": 7573.503
+      },
+      "snapshot_release_latency": {
+        "count": 206518,
+        "mean_us": 13.320577387927441,
+        "p50_us": 0.042,
+        "p99_us": 0.25,
+        "p999_us": 0.542,
+        "max_us": 63111.167
+      },
+      "writer_edges": 100352,
+      "writer_edges_per_sec": 10026.264635067539,
+      "writer_publishes": 98,
+      "final_hyperedges": 1120832,
+      "rss_bytes": 658849792
+    },
+    {
+      "scenario": "arcswap_readers_only",
+      "readers": 32,
+      "active_cores": 8,
+      "duration_secs": 10.006527791,
+      "reads": 229892,
+      "reads_per_sec": 22974.202920494343,
+      "reads_per_sec_per_core": 2871.775365061793,
+      "mean_edges_per_read": 1024.0,
+      "read_latency": {
+        "count": 229892,
+        "mean_us": 1391.5778397508404,
+        "p50_us": 285.439,
+        "p99_us": 25690.111,
+        "p999_us": 49807.359,
+        "max_us": 214958.079
+      },
+      "snapshot_acquire_latency": {
+        "count": 229892,
+        "mean_us": 0.40753086231795793,
+        "p50_us": 0.042,
+        "p99_us": 0.333,
+        "p999_us": 0.542,
+        "max_us": 21577.727
+      },
+      "snapshot_release_latency": {
+        "count": 229892,
+        "mean_us": 0.44441497311781186,
+        "p50_us": 0.042,
+        "p99_us": 0.292,
+        "p999_us": 0.5,
+        "max_us": 20168.703
+      },
+      "writer_edges": 0,
+      "writer_edges_per_sec": 0.0,
+      "writer_publishes": 0,
+      "final_hyperedges": 1000000,
+      "rss_bytes": 569196544
+    },
+    {
+      "scenario": "arcswap_with_writer",
+      "readers": 32,
+      "active_cores": 8,
+      "duration_secs": 10.008860416,
+      "reads": 206113,
+      "reads_per_sec": 20593.05369775276,
+      "reads_per_sec_per_core": 2574.131712219095,
+      "mean_edges_per_read": 1024.0,
+      "read_latency": {
+        "count": 206113,
+        "mean_us": 1550.7577031240126,
+        "p50_us": 292.351,
+        "p99_us": 28426.239,
+        "p999_us": 63078.399,
+        "max_us": 245891.071
+      },
+      "snapshot_acquire_latency": {
+        "count": 206113,
+        "mean_us": 0.7668215881579523,
+        "p50_us": 0.042,
+        "p99_us": 0.375,
+        "p999_us": 0.666,
+        "max_us": 22102.015
+      },
+      "snapshot_release_latency": {
+        "count": 206113,
+        "mean_us": 20.482953991257226,
+        "p50_us": 0.042,
+        "p99_us": 0.292,
+        "p999_us": 0.584,
+        "max_us": 146407.423
+      },
+      "writer_edges": 98304,
+      "writer_edges_per_sec": 9821.69756737269,
+      "writer_publishes": 96,
+      "final_hyperedges": 1119808,
+      "rss_bytes": 761364480
+    },
+    {
+      "scenario": "arcswap_readers_only",
+      "readers": 64,
+      "active_cores": 8,
+      "duration_secs": 10.00607975,
+      "reads": 236407,
+      "reads_per_sec": 23626.335778505065,
+      "reads_per_sec_per_core": 2953.291972313133,
+      "mean_edges_per_read": 1024.0,
+      "read_latency": {
+        "count": 236407,
+        "mean_us": 2703.405335104284,
+        "p50_us": 277.247,
+        "p99_us": 58261.503,
+        "p999_us": 114229.247,
+        "max_us": 193200.127
+      },
+      "snapshot_acquire_latency": {
+        "count": 236407,
+        "mean_us": 0.38265202807023485,
+        "p50_us": 0.042,
+        "p99_us": 0.334,
+        "p999_us": 0.584,
+        "max_us": 29294.591
+      },
+      "snapshot_release_latency": {
+        "count": 236407,
+        "mean_us": 0.850910032274848,
+        "p50_us": 0.042,
+        "p99_us": 0.292,
+        "p999_us": 0.5,
+        "max_us": 89784.319
+      },
+      "writer_edges": 0,
+      "writer_edges_per_sec": 0.0,
+      "writer_publishes": 0,
+      "final_hyperedges": 1000000,
+      "rss_bytes": 737017856
+    },
+    {
+      "scenario": "arcswap_with_writer",
+      "readers": 64,
+      "active_cores": 8,
+      "duration_secs": 10.000681417,
+      "reads": 215417,
+      "reads_per_sec": 21540.232211958682,
+      "reads_per_sec_per_core": 2692.5290264948353,
+      "mean_edges_per_read": 1024.0,
+      "read_latency": {
+        "count": 215417,
+        "mean_us": 2966.0091434195047,
+        "p50_us": 281.087,
+        "p99_us": 63602.687,
+        "p999_us": 132055.039,
+        "max_us": 353894.399
+      },
+      "snapshot_acquire_latency": {
+        "count": 215417,
+        "mean_us": 0.8388768806547301,
+        "p50_us": 0.042,
+        "p99_us": 0.375,
+        "p999_us": 0.667,
+        "max_us": 42074.111
+      },
+      "snapshot_release_latency": {
+        "count": 215417,
+        "mean_us": 14.524568947668943,
+        "p50_us": 0.042,
+        "p99_us": 0.333,
+        "p999_us": 0.583,
+        "max_us": 182714.367
+      },
+      "writer_edges": 55296,
+      "writer_edges_per_sec": 5529.223229329475,
+      "writer_publishes": 54,
+      "final_hyperedges": 1069632,
+      "rss_bytes": 662487040
+    }
+  ],
+  "derived": [
+    {
+      "readers": 1,
+      "arcswap_p50_overhead": -0.010106725973496156,
+      "arcswap_p99_overhead": 0.042317815953104576,
+      "rwlock_p50_overhead": null,
+      "rwlock_p99_overhead": null,
+      "arcswap_scaling_efficiency": 1.0
+    },
+    {
+      "readers": 8,
+      "arcswap_p50_overhead": -0.0009174344804847578,
+      "arcswap_p99_overhead": 0.25626360075692367,
+      "rwlock_p50_overhead": null,
+      "rwlock_p99_overhead": null,
+      "arcswap_scaling_efficiency": 0.711381153376613
+    },
+    {
+      "readers": 16,
+      "arcswap_p50_overhead": -0.1071431893080026,
+      "arcswap_p99_overhead": 0.08672700647571108,
+      "rwlock_p50_overhead": null,
+      "rwlock_p99_overhead": null,
+      "arcswap_scaling_efficiency": 0.697592306476478
+    },
+    {
+      "readers": 32,
+      "arcswap_p50_overhead": 0.024215331471873158,
+      "arcswap_p99_overhead": 0.10650510618657894,
+      "rwlock_p50_overhead": null,
+      "rwlock_p99_overhead": null,
+      "arcswap_scaling_efficiency": 0.7107876542615125
+    },
+    {
+      "readers": 64,
+      "arcswap_p50_overhead": 0.013850465469418927,
+      "arcswap_p99_overhead": 0.09167604206846502,
+      "rwlock_p50_overhead": null,
+      "rwlock_p99_overhead": null,
+      "arcswap_scaling_efficiency": 0.7309636745576857
+    }
+  ]
+}

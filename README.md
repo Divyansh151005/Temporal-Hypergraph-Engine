@@ -2,7 +2,7 @@
 
 **Sub-millisecond temporal graph database and KV-offloader for RAG that never serves stale facts.**
 
-Temporal Hypergraph Engine stores knowledge as time-bounded N-ary hyperedges ("Satya Nadella was CEO of Microsoft *from 2014*"), so a multi-hop traversal at any point in time only follows facts that were true then. Superseded facts are neither returned nor expanded. The engine is written in Rust, reads lock-free from immutable snapshots, and is reachable in-process through PyO3, over gRPC, or as a secondary KV-cache tier for vLLM PagedAttention.
+Temporal Hypergraph Engine stores knowledge as time-bounded N-ary hyperedges ("Satya Nadella was CEO of Microsoft *from 2014*"), so a multi-hop traversal at any point in time only follows facts that were true then. Superseded facts are neither returned nor expanded. The engine is written in Rust, reads lock-free from immutable snapshots, and is reachable in-process through PyO3 or over gRPC. It also ships a zero-copy KV-cache block store with a Python offloader built for vLLM: engine and vLLM share CUDA memory side-by-side; blocks copied from GPU into the engine and back are bit-for-bit identical.
 
 - **0% stale-fact contamination** in multi-hop retrieval, against 53% for flat vector RAG and 45% for naive Graph RAG.
 - **0.53 ms p50** 3-hop temporal retrieval, about 8x faster than the same traversal in NetworkX.
@@ -12,46 +12,50 @@ Temporal Hypergraph Engine stores knowledge as time-bounded N-ary hyperedges ("S
 
 ## Quickstart
 
-Start the server (gRPC on `localhost:50051`; set `HYPERGRAPH_API_KEY` to require a key):
+**1. Start the server** (gRPC on `localhost:50051`). The prebuilt image means you do not need a Rust toolchain or a local compile:
 
 ```bash
-cargo run --release -p grpc-server --bin hypergraph-server -- --data-dir ./data
+docker run -d -p 50051:50051 ghcr.io/divyansh151005/temporal-hypergraph-server
 ```
 
-Then add temporal memory in one line from your framework of choice.
+Add `-v thg-data:/data` to keep data across container restarts, and `-e HYPERGRAPH_API_KEY=your_key` to require a key. To build from source instead, run `docker build -t temporal-hypergraph-server .` or `cargo run --release -p grpc-server --bin hypergraph-server -- --data-dir ./data`.
 
-**Python**
+**2. Add temporal memory** in one line from your framework of choice.
+
+**Python** (`pip install hypergraph-client`)
 
 ```python
 from hypergraph_client import TemporalHypergraph; memory = TemporalHypergraph(api_key="your_key")
 ```
 
-**LangChain**
+**LangChain** (`pip install langchain-hypergraph`)
 
 ```python
 from langchain_hypergraph import TemporalHypergraph; memory = TemporalHypergraph(api_key="your_key", session_id="user-42")
 ```
 
-**LlamaIndex**
+**LlamaIndex** (`pip install llama-index-hypergraph`)
 
 ```python
 from llama_index_hypergraph import TemporalHypergraph; memory = TemporalHypergraph(api_key="your_key", session_id="user-42")
 ```
 
-**TypeScript (Vercel AI SDK)**
+**TypeScript (Vercel AI SDK)** (`npm install @temporal-hypergraph/sdk ai zod`)
 
 ```ts
 import { TemporalHypergraph } from "@temporal-hypergraph/sdk"; const memory = new TemporalHypergraph({ apiKey: "your_key" });
 ```
 
-**In-process, no server (PyO3)**
+**In-process, no server (PyO3)** (`pip install hypergraph-engine-native`)
 
 ```python
 from hypergraph_engine_native import NativeHypergraphEngine
 
 engine = NativeHypergraphEngine.in_memory()
 engine.insert_hyperedge_fast("CEO_OF", ["person:nadella", "org:microsoft"], 1391212800, None, b"")
-engine.traverse(["org:microsoft"], k_hops=3, as_of=1700000000)
+# decay_lambda is per day. 0 selects the engine default (30-day half-life), so a
+# fact from 2014 would score ~0; 1e-6 keeps old facts at full weight.
+engine.traverse(["org:microsoft"], k_hops=3, as_of=1700000000, decay_lambda=1e-6)
 ```
 
 Each integration has its own README with the full API: [Python client](integrations/python-client/README.md), [LangChain](integrations/langchain/README.md), [LlamaIndex](integrations/llamaindex/README.md), [Vercel AI SDK](integrations/vercel-ai-sdk/README.md).
@@ -70,7 +74,7 @@ flowchart LR
         grpc["grpc-server: Tonic over TCP or UDS"]
     end
     subgraph consumers [Consumers]
-        vllm["vLLM PagedAttention via hypergraph_offloader"]
+        vllm["hypergraph_offloader: KV blocks from vLLM-style CUDA tensors"]
         frameworks["LangChain, LlamaIndex, Vercel AI SDK"]
         apps["Python and TypeScript apps"]
     end
@@ -82,7 +86,6 @@ flowchart LR
     pyo3 --> vllm
     pyo3 --> apps
     grpc --> frameworks
-    grpc --> vllm
 ```
 
 <details>
@@ -97,10 +100,10 @@ flowchart LR
               v                                v               v
      pyo3-bindings (in-process)      grpc-server (Tonic, TCP/UDS)
               |                                |
-     +--------+---------+            +---------+-------------------------+
-     v                  v            v                                   v
- vLLM PagedAttention  Python apps   LangChain / LlamaIndex / Vercel AI   vLLM (remote)
- (hypergraph_offloader)
+     +--------+---------+            +---------+
+     v                  v            v
+ hypergraph_offloader  Python apps   LangChain / LlamaIndex / Vercel AI
+ (KV blocks from CUDA tensors)
 ```
 
 </details>
@@ -147,8 +150,8 @@ The retrieval data is synthetic and template-generated, and the 10M-edge ingest 
 | [`crates/temporal-math`](crates/temporal-math) | Time-decay scoring, Fourier time encodings, temporal conflict resolution |
 | [`crates/grpc-server`](crates/grpc-server) | Tonic gRPC server (`hypergraph-server`) over TCP or Unix sockets |
 | [`crates/pyo3-bindings`](crates/pyo3-bindings) | In-process Python module `hypergraph_engine_native` |
-| [`crates/vllm-kv-store`](crates/vllm-kv-store) | Content-addressed secondary tier for vLLM KV-cache blocks |
-| [`python/hypergraph_offloader`](python/hypergraph_offloader) | vLLM connector for the KV tier |
+| [`crates/vllm-kv-store`](crates/vllm-kv-store) | Content-addressed, mmap-backed store for KV-cache blocks |
+| [`python/hypergraph_offloader`](python/hypergraph_offloader) | Python KV-block offloader (`pip install hypergraph-offloader`); verified bit-exact on CUDA alongside vLLM |
 | [`python/evaluation`](python/evaluation) | Extraction, F1 evaluation, LLM failover router, competitor benchmark |
 | [`integrations/`](integrations) | Python client, LangChain, LlamaIndex, Vercel AI SDK |
 | [`benchmarks/`](benchmarks) | Scale, concurrency and report-generation benchmarks |

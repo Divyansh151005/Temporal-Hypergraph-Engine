@@ -1,0 +1,289 @@
+{
+  "benchmark": "scale_stress",
+  "environment": {
+    "cpu": "Apple M3",
+    "logical_cores": 8,
+    "memory_bytes": 8589934592,
+    "os": "macos aarch64",
+    "rustc": "rustc 1.91.1 (ed61e7d7e 2025-11-07) (Homebrew)",
+    "git_sha": "efd737f-dirty",
+    "profile": "release",
+    "started_at": 1793372398
+  },
+  "config": {
+    "arity": "2..=4",
+    "batch": 65536,
+    "closed_fraction": 0.1,
+    "edges": 10000000,
+    "event_types": 32,
+    "fsync_edges": 1000000,
+    "nodes": 2000000,
+    "rss_guard": 0.75,
+    "sample_every": 500000,
+    "seed": 42,
+    "single_preload": 1000000,
+    "single_secs": 10,
+    "single_threads": 4,
+    "skew": 2.0
+  },
+  "modes": [
+    {
+      "mode": "memory",
+      "target_edges": 10000000,
+      "ingested_edges": 3014656,
+      "failed_inserts": 0,
+      "stop_reason": "memory pressure: live heap 1072 MiB exceeds RSS 744 MiB, so the OS is paging the graph out",
+      "wall_secs": 34.200891375,
+      "engine_busy_secs": 34.137713581,
+      "producer_stall_secs": 0.032774334,
+      "sustained_edges_per_sec": 88145.5388675524,
+      "resident_edges": 2031616,
+      "resident_edges_per_sec": 200040.88304826556,
+      "engine_edges_per_sec": 88308.66756342653,
+      "peak_edges_per_sec": 313600.7629747313,
+      "batch_size": 65536,
+      "batch_latency": {
+        "count": 46,
+        "mean_us": 742148.1850434784,
+        "p50_us": 396361.727,
+        "p99_us": 3332374.527,
+        "p999_us": 3332374.527,
+        "max_us": 3332374.527
+      },
+      "amortized_ns_per_edge": 11323.916752359142,
+      "live_nodes": 1912637,
+      "live_hyperedges": 3014656,
+      "max_node_degree": 6424,
+      "heap_bytes_per_million_edges": 338094662.956053,
+      "rss_bytes_per_million_edges": 245242517.30103806,
+      "engine_heap_bytes": 1015914526,
+      "peak_rss_bytes": 980582400,
+      "wal_disk_bytes": null,
+      "memory_samples": [
+        {
+          "edges": 0,
+          "elapsed_secs": 0.0,
+          "rss_bytes": 24887296,
+          "heap_live_bytes": 23085906
+        },
+        {
+          "edges": 524288,
+          "elapsed_secs": 1.734561125,
+          "rss_bytes": 547094528,
+          "heap_live_bytes": 418662416
+        },
+        {
+          "edges": 1048576,
+          "elapsed_secs": 4.184540083,
+          "rss_bytes": 670023680,
+          "heap_live_bytes": 577018204
+        },
+        {
+          "edges": 1507328,
+          "elapsed_secs": 6.953538458,
+          "rss_bytes": 816922624,
+          "heap_live_bytes": 694836442
+        },
+        {
+          "edges": 2031616,
+          "elapsed_secs": 10.156003958,
+          "rss_bytes": 966098944,
+          "heap_live_bytes": 818117818
+        },
+        {
+          "edges": 2555904,
+          "elapsed_secs": 18.134203792,
+          "rss_bytes": 980582400,
+          "heap_live_bytes": 1023591920
+        },
+        {
+          "edges": 3014656,
+          "elapsed_secs": 34.193242958,
+          "rss_bytes": 780894208,
+          "heap_live_bytes": 1124171242
+        }
+      ],
+      "single_write": {
+        "threads": 4,
+        "preloaded_edges": 1000000,
+        "duration_secs": 10.007517208,
+        "writes": 339984,
+        "writes_per_sec": 33972.86189307945,
+        "latency": {
+          "count": 339984,
+          "mean_us": 116.86790617205538,
+          "p50_us": 26.015,
+          "p99_us": 2211.839,
+          "p999_us": 4808.703,
+          "max_us": 28606.463
+        }
+      }
+    },
+    {
+      "mode": "wal-buffered",
+      "target_edges": 10000000,
+      "ingested_edges": 3538944,
+      "failed_inserts": 0,
+      "stop_reason": "memory pressure: live heap 1213 MiB exceeds RSS 823 MiB, so the OS is paging the graph out",
+      "wall_secs": 64.357466125,
+      "engine_busy_secs": 64.287295126,
+      "producer_stall_secs": 0.034385831,
+      "sustained_edges_per_sec": 54988.86474377956,
+      "resident_edges": 2031616,
+      "resident_edges_per_sec": 138735.15685579952,
+      "engine_edges_per_sec": 55048.886301155464,
+      "peak_edges_per_sec": 306576.6555061275,
+      "batch_size": 65536,
+      "batch_latency": {
+        "count": 54,
+        "mean_us": 1190523.3351111112,
+        "p50_us": 740294.655,
+        "p99_us": 5507121.151,
+        "p999_us": 5507121.151,
+        "max_us": 5507121.151
+      },
+      "amortized_ns_per_edge": 18165.6717727096,
+      "live_nodes": 1945885,
+      "live_hyperedges": 3538944,
+      "max_node_degree": 7559,
+      "heap_bytes_per_million_edges": 325384333.4227838,
+      "rss_bytes_per_million_edges": 146332664.64799392,
+      "engine_heap_bytes": 1163685370,
+      "peak_rss_bytes": 988987392,
+      "wal_disk_bytes": 510922169,
+      "memory_samples": [
+        {
+          "edges": 0,
+          "elapsed_secs": 0.0,
+          "rss_bytes": 252362752,
+          "heap_live_bytes": 23175276
+        },
+        {
+          "edges": 524288,
+          "elapsed_secs": 1.7703410000000002,
+          "rss_bytes": 714227712,
+          "heap_live_bytes": 452238414
+        },
+        {
+          "edges": 1048576,
+          "elapsed_secs": 3.8712932909999997,
+          "rss_bytes": 752943104,
+          "heap_live_bytes": 610594202
+        },
+        {
+          "edges": 1507328,
+          "elapsed_secs": 7.4559433330000005,
+          "rss_bytes": 617922560,
+          "heap_live_bytes": 728412440
+        },
+        {
+          "edges": 2031616,
+          "elapsed_secs": 14.643844041,
+          "rss_bytes": 853377024,
+          "heap_live_bytes": 851693816
+        },
+        {
+          "edges": 2555904,
+          "elapsed_secs": 32.083384208,
+          "rss_bytes": 988987392,
+          "heap_live_bytes": 1057167918
+        },
+        {
+          "edges": 3014656,
+          "elapsed_secs": 46.359696333,
+          "rss_bytes": 897187840,
+          "heap_live_bytes": 1157747240
+        },
+        {
+          "edges": 3538944,
+          "elapsed_secs": 64.350180708,
+          "rss_bytes": 863191040,
+          "heap_live_bytes": 1272053278
+        }
+      ],
+      "single_write": {
+        "threads": 4,
+        "preloaded_edges": 1000000,
+        "duration_secs": 10.010367084,
+        "writes": 327531,
+        "writes_per_sec": 32719.1797515105,
+        "latency": {
+          "count": 327531,
+          "mean_us": 121.46587099236369,
+          "p50_us": 28.799,
+          "p99_us": 2301.951,
+          "p999_us": 4841.471,
+          "max_us": 40435.711
+        }
+      }
+    },
+    {
+      "mode": "wal-fsync",
+      "target_edges": 1000000,
+      "ingested_edges": 1000000,
+      "failed_inserts": 0,
+      "stop_reason": null,
+      "wall_secs": 4.345759375,
+      "engine_busy_secs": 4.307034415,
+      "producer_stall_secs": 0.033898834,
+      "sustained_edges_per_sec": 230109.38105610138,
+      "resident_edges": 1000000,
+      "resident_edges_per_sec": 230120.59166307165,
+      "engine_edges_per_sec": 232178.3165969896,
+      "peak_edges_per_sec": 246915.31289096505,
+      "batch_size": 65536,
+      "batch_latency": {
+        "count": 16,
+        "mean_us": 269195.264,
+        "p50_us": 271843.327,
+        "p99_us": 347078.655,
+        "p999_us": 347078.655,
+        "max_us": 347078.655
+      },
+      "amortized_ns_per_edge": 4307.034415,
+      "live_nodes": 1380545,
+      "live_hyperedges": 1000000,
+      "max_node_degree": 2057,
+      "heap_bytes_per_million_edges": 494464656.4438203,
+      "rss_bytes_per_million_edges": 529987488.17247725,
+      "engine_heap_bytes": 488873560,
+      "peak_rss_bytes": 868925440,
+      "wal_disk_bytes": 193623541,
+      "memory_samples": [
+        {
+          "edges": 0,
+          "elapsed_secs": 0.0,
+          "rss_bytes": 342622208,
+          "heap_live_bytes": 23193202
+        },
+        {
+          "edges": 524288,
+          "elapsed_secs": 2.157925291,
+          "rss_bytes": 732413952,
+          "heap_live_bytes": 452256208
+        },
+        {
+          "edges": 1000000,
+          "elapsed_secs": 4.345547666,
+          "rss_bytes": 868925440,
+          "heap_live_bytes": 512067858
+        }
+      ],
+      "single_write": {
+        "threads": 4,
+        "preloaded_edges": 1000000,
+        "duration_secs": 10.015345958,
+        "writes": 4574,
+        "writes_per_sec": 456.6991514003974,
+        "latency": {
+          "count": 4574,
+          "mean_us": 8751.165341495403,
+          "p50_us": 5677.055,
+          "p99_us": 46858.239,
+          "p999_us": 102563.839,
+          "max_us": 116719.615
+        }
+      }
+    }
+  ]
+}

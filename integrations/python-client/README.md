@@ -4,8 +4,11 @@ gRPC client for the Temporal Hypergraph Engine. The LangChain and LlamaIndex
 integrations are built on it.
 
 ```bash
-pip install -e integrations/python-client
+pip install hypergraph-client
+docker run -d -p 50051:50051 ghcr.io/divyansh151005/temporal-hypergraph-server
 ```
+
+For development from a clone: `pip install -e integrations/python-client`.
 
 ```python
 from hypergraph_client import TemporalHypergraph
@@ -27,10 +30,9 @@ with HypergraphClient("localhost:50051", api_key=None) as client:
   accepts `host:port`, `tcp://host:port` and `unix:///path`.
 - `api_key` defaults to `$HYPERGRAPH_API_KEY` and is sent as `x-api-key`.
 - `AsyncHypergraphClient` offers the same methods for `asyncio`.
-- `HypergraphKVOffloadTierManager` is a vLLM secondary KV tier over gRPC
-  (`submit_store`, `submit_load`, `close`); point vLLM's
-  `secondary_tier_module` at `hypergraph_client.kv_tier.HypergraphKVOffloadTierManager`
-  with `{"grpc_endpoint": "localhost:50051"}`.
+- `HypergraphKVOffloadTierManager` stores and loads KV blocks over gRPC
+  (`submit_store`, `submit_load`, `close`) with a vLLM-style interface. It is
+  not yet loadable as a vLLM secondary tier; call it from your own code.
 - `SessionMemory` stores chat messages around a `session:<id>` node; see the
   `hypergraph_client.session` module for the graph conventions.
 - `HashingEmbedder` is a deterministic, dependency-free default embedder. Use a

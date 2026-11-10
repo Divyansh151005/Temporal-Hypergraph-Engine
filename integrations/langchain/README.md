@@ -3,8 +3,11 @@
 LangChain chat memory and vector store backed by the Temporal Hypergraph Engine.
 
 ```bash
-pip install -e integrations/python-client -e integrations/langchain
+pip install langchain-hypergraph
+docker run -d -p 50051:50051 ghcr.io/divyansh151005/temporal-hypergraph-server
 ```
+
+For development from a clone: `pip install -e integrations/python-client -e integrations/langchain`.
 
 ```python
 from langchain_hypergraph import TemporalHypergraph

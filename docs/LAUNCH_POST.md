@@ -87,7 +87,7 @@ Most users reach the engine from Python, so the FFI boundary matters. In [`crate
 - Every call into the engine runs inside `py.allow_threads(...)`, which releases the GIL. Python threads calling `retrieve` really do run in parallel on the lock-free read path.
 - Retrieval results are converted into Python objects on the way out. That cost is not zero, and it *is* included in the 0.53 ms p50 below.
 
-The same extension also exposes a KV-cache block store ([`crates/vllm-kv-store/`](../crates/vllm-kv-store/)) that [`python/hypergraph_offloader/`](../python/hypergraph_offloader/) plugs into vLLM as a secondary tier for PagedAttention blocks. This is the genuinely zero-copy path. `store_kv_block_raw` and `load_kv_block_raw` take a raw pointer and length (for example `torch.Tensor.data_ptr()`) and copy straight between the tensor's memory and 64-byte-aligned, append-only `mmap` segments, with no intermediate Python `bytes`. Blocks can be tied to hyperedges, so the eviction planner can use the same temporal decay to decide which cached contexts have gone cold. All of the crate's `unsafe` code lives in one module (`raw.rs`), and the test suite runs under Miri.
+The same extension also exposes a KV-cache block store ([`crates/vllm-kv-store/`](../crates/vllm-kv-store/)), driven from Python by [`python/hypergraph_offloader/`](../python/hypergraph_offloader/). It is built for vLLM-style KV blocks, but it is not yet registered as a vLLM KV connector; that is the next milestone. What we have verified, on a Kaggle Tesla T4 running vLLM 0.33 with Qwen2.5-1.5B ([`kaggle_gpu_job/`](../kaggle_gpu_job/)): engine and vLLM share CUDA memory side-by-side; blocks copied from GPU into the engine and back are bit-for-bit identical (`torch.equal`). This is the genuinely zero-copy path. `store_kv_block_raw` and `load_kv_block_raw` take a raw pointer and length (for example `torch.Tensor.data_ptr()`) and copy straight between the tensor's memory and 64-byte-aligned, append-only `mmap` segments, with no intermediate Python `bytes`. Blocks can be tied to hyperedges, so the eviction planner can use the same temporal decay to decide which cached contexts have gone cold. All of the crate's `unsafe` code lives in one module (`raw.rs`), and the test suite runs under Miri.
 
 ## 3. The numbers
 
@@ -181,13 +181,20 @@ The lesson we took from it is that "conservative" recovery rules are not automat
 
 ## 6. Try it
 
-```bash
-pip install hypergraph-engine-native
-```
+**1. Start the server.** The prebuilt image means you do not need a Rust toolchain or a local compile:
 
 ```bash
+docker run -d -p 50051:50051 ghcr.io/divyansh151005/temporal-hypergraph-server
+```
+
+**2. Install a client.** Python (core client, LangChain, LlamaIndex) or TypeScript:
+
+```bash
+pip install hypergraph-client langchain-hypergraph llama-index-hypergraph
 npm install @temporal-hypergraph/sdk
 ```
+
+Or skip the server entirely and run the engine in-process with `pip install hypergraph-engine-native`.
 
 Repository: [github.com/Divyansh151005/Temporal-Hypergraph-Engine](https://github.com/Divyansh151005/Temporal-Hypergraph-Engine)
 

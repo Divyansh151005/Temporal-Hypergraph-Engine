@@ -1,0 +1,562 @@
+{
+  "benchmark": "competitor_bench",
+  "environment": {
+    "cpu": "Apple M3",
+    "os": "Darwin arm64",
+    "python": "3.10.13",
+    "numpy": "1.26.4",
+    "networkx": "3.4.2",
+    "faiss": "1.15.1",
+    "engine": "0.1.0",
+    "git_sha": "efd737f-dirty",
+    "started_at": "2026-10-30T14:38:29+00:00"
+  },
+  "config": {
+    "entities": 12000,
+    "facts": 60000,
+    "queries": 500,
+    "hops": 3,
+    "query_plan": true,
+    "top_k": 16,
+    "vector_k": 5,
+    "max_vector_k": 40,
+    "vector_backend": "faiss",
+    "embedder": "hashing",
+    "model": "sentence-transformers/all-MiniLM-L6-v2",
+    "dim": 384,
+    "decay_lambda": 1e-06,
+    "chunk_tokens": 128,
+    "warmup": 50,
+    "nx_query_cap": 0,
+    "scale_sweep": "10000,50000,100000",
+    "seed": 7,
+    "cache_dir": "results/phase7/cache",
+    "out": "../../results/phase7/competitor_sweep.json",
+    "embedder_name": "hashing-384",
+    "embedding_dim": 384
+  },
+  "sweep": [
+    {
+      "entities_requested": 10000,
+      "facts_requested": 50000,
+      "dataset": {
+        "entities": 10000,
+        "entity_kinds": {
+          "person": 4800,
+          "company": 2400,
+          "product": 1300,
+          "city": 600,
+          "drug": 900
+        },
+        "facts": 50000,
+        "event_types": {
+          "CEO_OF": 6061,
+          "HEADQUARTERED_IN": 4168,
+          "MAKES": 1748,
+          "ACQUIRED": 720,
+          "WORKS_AT": 9643,
+          "LIVES_IN": 7139,
+          "SUPPLIES": 6770,
+          "PRESCRIBED": 6774,
+          "INVESTED_IN": 6977
+        },
+        "nary_facts": 23187,
+        "closed_facts": 21358,
+        "mean_entity_degree": 12.403040676600886,
+        "max_entity_degree": 2519,
+        "articles": 8811,
+        "chunks": 14416,
+        "mean_chunk_tokens": 84.95359322974473,
+        "queries": 500,
+        "query_templates": {
+          "ceo_of_employer": 174,
+          "home_of_ceo_of_maker": 133,
+          "ceo_of_maker": 111,
+          "ceo_of_employer_acquirer": 40,
+          "hq_of_maker_acquirer": 23,
+          "hq_of_acquirer": 19
+        },
+        "mean_gold_facts": 2.392
+      },
+      "contenders": [
+        {
+          "name": "hypergraph",
+          "label": "Temporal Hypergraph (PyO3)",
+          "queries": 500,
+          "latency_ms": {
+            "mean": 2.29753332,
+            "p50": 0.5036670000000001,
+            "p95": 7.76874135,
+            "p99": 9.95167092
+          },
+          "tokens": {
+            "mean": 674.822,
+            "p50": 660.0,
+            "p95": 856.0
+          },
+          "precision": 0.08618387445887446,
+          "recall": 0.5513333333333333,
+          "f1": 0.14278289742593148,
+          "stale_rate": 0.0,
+          "full_chain_recall": 0.466,
+          "final_hop_recall": 0.506,
+          "mean_retrieved_facts": 15.454,
+          "build_secs": 0.9137440000049537
+        },
+        {
+          "name": "networkx_naive",
+          "label": "NetworkX property graph (naive BFS)",
+          "queries": 100,
+          "latency_ms": {
+            "mean": 19.65232837,
+            "p50": 4.347917,
+            "p95": 57.6065708,
+            "p99": 63.514816580000016
+          },
+          "tokens": {
+            "mean": 695.61,
+            "p50": 672.5,
+            "p95": 807.25
+          },
+          "precision": 0.049375,
+          "recall": 0.39333333333333337,
+          "f1": 0.08771929824561403,
+          "stale_rate": 0.481875,
+          "full_chain_recall": 0.22,
+          "final_hop_recall": 0.28,
+          "mean_retrieved_facts": 16.0,
+          "build_secs": 0.5643058749992633
+        },
+        {
+          "name": "networkx_temporal",
+          "label": "NetworkX property graph (temporal filter)",
+          "queries": 100,
+          "latency_ms": {
+            "mean": 17.37819288,
+            "p50": 4.3346245,
+            "p95": 54.765761049999995,
+            "p99": 61.74211575000012
+          },
+          "tokens": {
+            "mean": 674.15,
+            "p50": 650.5,
+            "p95": 859.6999999999999
+          },
+          "precision": 0.08409722222222221,
+          "recall": 0.5416666666666666,
+          "f1": 0.14093210298473455,
+          "stale_rate": 0.0,
+          "full_chain_recall": 0.45,
+          "final_hop_recall": 0.49,
+          "mean_retrieved_facts": 15.35,
+          "build_secs": 0.30296699999598786
+        },
+        {
+          "name": "vector_faiss_k5",
+          "label": "Flat vector (FAISS exact, k=5)",
+          "queries": 500,
+          "latency_ms": {
+            "mean": 0.5618087420000001,
+            "p50": 0.373625,
+            "p95": 1.1805347499999994,
+            "p99": 1.54050676
+          },
+          "tokens": {
+            "mean": 306.104,
+            "p50": 301.5,
+            "p95": 482.04999999999995
+          },
+          "precision": 0.0013026496844116982,
+          "recall": 0.014333333333333333,
+          "f1": 0.002381271610836828,
+          "stale_rate": 0.5071150654366497,
+          "full_chain_recall": 0.0,
+          "final_hop_recall": 0.0,
+          "mean_retrieved_facts": 14.598,
+          "k": 5,
+          "token_matched": false,
+          "build_secs": 0.016858207993209362
+        },
+        {
+          "name": "vector_faiss_k10",
+          "label": "Flat vector (FAISS exact, token-matched k=10)",
+          "queries": 500,
+          "latency_ms": {
+            "mean": 0.31028409399999995,
+            "p50": 0.3031875,
+            "p95": 0.3810649,
+            "p99": 0.431922
+          },
+          "tokens": {
+            "mean": 651.076,
+            "p50": 649.0,
+            "p95": 940.2499999999998
+          },
+          "precision": 0.0008251893073675609,
+          "recall": 0.017,
+          "f1": 0.001564412622099724,
+          "stale_rate": 0.5187766118379175,
+          "full_chain_recall": 0.0,
+          "final_hop_recall": 0.0,
+          "mean_retrieved_facts": 30.888,
+          "k": 10,
+          "token_matched": true,
+          "build_secs": 0.016858207993209362
+        }
+      ],
+      "parity": {
+        "hypergraph_vs_networkx_temporal_jaccard": 0.9848366013071896,
+        "note": "Both rank the same reachable, valid facts by cosine; values near 1.0 confirm identical retrieval semantics."
+      },
+      "networkx_queries": 100
+    },
+    {
+      "entities_requested": 50000,
+      "facts_requested": 250000,
+      "dataset": {
+        "entities": 50000,
+        "entity_kinds": {
+          "person": 24000,
+          "company": 12000,
+          "product": 6500,
+          "city": 3000,
+          "drug": 4500
+        },
+        "facts": 250000,
+        "event_types": {
+          "CEO_OF": 29946,
+          "HEADQUARTERED_IN": 20808,
+          "MAKES": 8644,
+          "ACQUIRED": 3600,
+          "WORKS_AT": 47945,
+          "LIVES_IN": 36002,
+          "SUPPLIES": 34532,
+          "INVESTED_IN": 34149,
+          "PRESCRIBED": 34374
+        },
+        "nary_facts": 116851,
+        "closed_facts": 106083,
+        "mean_entity_degree": 12.458616093068347,
+        "max_entity_degree": 9695,
+        "articles": 44067,
+        "chunks": 72101,
+        "mean_chunk_tokens": 85.03056823067641,
+        "queries": 500,
+        "query_templates": {
+          "ceo_of_employer_acquirer": 19,
+          "ceo_of_employer": 190,
+          "home_of_ceo_of_maker": 128,
+          "hq_of_maker_acquirer": 17,
+          "ceo_of_maker": 133,
+          "hq_of_acquirer": 13
+        },
+        "mean_gold_facts": 2.328
+      },
+      "contenders": [
+        {
+          "name": "hypergraph",
+          "label": "Temporal Hypergraph (PyO3)",
+          "queries": 500,
+          "latency_ms": {
+            "mean": 11.274626896,
+            "p50": 1.9378125000000002,
+            "p95": 47.263432699999996,
+            "p99": 58.29803624999999
+          },
+          "tokens": {
+            "mean": 689.592,
+            "p50": 679.0,
+            "p95": 864.0
+          },
+          "precision": 0.07564195526695526,
+          "recall": 0.5306666666666666,
+          "f1": 0.1285416627747897,
+          "stale_rate": 0.0,
+          "full_chain_recall": 0.418,
+          "final_hop_recall": 0.474,
+          "mean_retrieved_facts": 15.698,
+          "build_secs": 6.250366916996427
+        },
+        {
+          "name": "networkx_naive",
+          "label": "NetworkX property graph (naive BFS)",
+          "queries": 100,
+          "latency_ms": {
+            "mean": 89.116282,
+            "p50": 14.9819165,
+            "p95": 327.7388226,
+            "p99": 337.3286272600003
+          },
+          "tokens": {
+            "mean": 701.09,
+            "p50": 684.0,
+            "p95": 816.05
+          },
+          "precision": 0.044375,
+          "recall": 0.35333333333333333,
+          "f1": 0.07883040935672514,
+          "stale_rate": 0.483125,
+          "full_chain_recall": 0.19,
+          "final_hop_recall": 0.25,
+          "mean_retrieved_facts": 16.0,
+          "build_secs": 2.0552633339975728
+        },
+        {
+          "name": "networkx_temporal",
+          "label": "NetworkX property graph (temporal filter)",
+          "queries": 100,
+          "latency_ms": {
+            "mean": 65.52409202,
+            "p50": 13.603312500000001,
+            "p95": 297.28114339999996,
+            "p99": 330.38613967000083
+          },
+          "tokens": {
+            "mean": 687.2,
+            "p50": 687.0,
+            "p95": 864.3
+          },
+          "precision": 0.07667857142857143,
+          "recall": 0.55,
+          "f1": 0.1328157894736842,
+          "stale_rate": 0.0,
+          "full_chain_recall": 0.39,
+          "final_hop_recall": 0.49,
+          "mean_retrieved_facts": 15.66,
+          "build_secs": 1.285536959010642
+        },
+        {
+          "name": "vector_faiss_k5",
+          "label": "Flat vector (FAISS exact, k=5)",
+          "queries": 500,
+          "latency_ms": {
+            "mean": 3.459923658,
+            "p50": 2.364479,
+            "p95": 7.593716699999999,
+            "p99": 10.070973749999991
+          },
+          "tokens": {
+            "mean": 281.842,
+            "p50": 274.5,
+            "p95": 463.04999999999995
+          },
+          "precision": 0.0005023199023199023,
+          "recall": 0.004666666666666667,
+          "f1": 0.0008933027756557169,
+          "stale_rate": 0.4678975333206899,
+          "full_chain_recall": 0.0,
+          "final_hop_recall": 0.0,
+          "mean_retrieved_facts": 13.668,
+          "k": 5,
+          "token_matched": false,
+          "build_secs": 0.08832066699687857
+        },
+        {
+          "name": "vector_faiss_k12",
+          "label": "Flat vector (FAISS exact, token-matched k=12)",
+          "queries": 500,
+          "latency_ms": {
+            "mean": 3.187829432,
+            "p50": 2.6781664999999997,
+            "p95": 5.615428849999999,
+            "p99": 7.331251339999994
+          },
+          "tokens": {
+            "mean": 711.444,
+            "p50": 692.5,
+            "p95": 1076.1
+          },
+          "precision": 0.00037127481321749936,
+          "recall": 0.008333333333333333,
+          "f1": 0.0007076748990662884,
+          "stale_rate": 0.4885638128816563,
+          "full_chain_recall": 0.0,
+          "final_hop_recall": 0.0,
+          "mean_retrieved_facts": 34.298,
+          "k": 12,
+          "token_matched": true,
+          "build_secs": 0.08832066699687857
+        }
+      ],
+      "parity": {
+        "hypergraph_vs_networkx_temporal_jaccard": 0.9836601307189542,
+        "note": "Both rank the same reachable, valid facts by cosine; values near 1.0 confirm identical retrieval semantics."
+      },
+      "networkx_queries": 100
+    },
+    {
+      "entities_requested": 100000,
+      "facts_requested": 500000,
+      "dataset": {
+        "entities": 100000,
+        "entity_kinds": {
+          "person": 48000,
+          "company": 24000,
+          "product": 13000,
+          "city": 6000,
+          "drug": 9000
+        },
+        "facts": 500000,
+        "event_types": {
+          "CEO_OF": 59537,
+          "HEADQUARTERED_IN": 41928,
+          "MAKES": 17304,
+          "ACQUIRED": 7200,
+          "WORKS_AT": 95846,
+          "LIVES_IN": 71806,
+          "SUPPLIES": 68916,
+          "PRESCRIBED": 69172,
+          "INVESTED_IN": 68291
+        },
+        "nary_facts": 233934,
+        "closed_facts": 212325,
+        "mean_entity_degree": 12.459449089220081,
+        "max_entity_degree": 17605,
+        "articles": 88102,
+        "chunks": 144036,
+        "mean_chunk_tokens": 85.03810158571468,
+        "queries": 500,
+        "query_templates": {
+          "ceo_of_employer_acquirer": 25,
+          "home_of_ceo_of_maker": 122,
+          "hq_of_maker_acquirer": 20,
+          "ceo_of_maker": 125,
+          "ceo_of_employer": 197,
+          "hq_of_acquirer": 11
+        },
+        "mean_gold_facts": 2.334
+      },
+      "contenders": [
+        {
+          "name": "hypergraph",
+          "label": "Temporal Hypergraph (PyO3)",
+          "queries": 500,
+          "latency_ms": {
+            "mean": 72.287709692,
+            "p50": 8.670167,
+            "p95": 331.43248154999986,
+            "p99": 773.2572866699996
+          },
+          "tokens": {
+            "mean": 684.956,
+            "p50": 665.0,
+            "p95": 847.1999999999998
+          },
+          "precision": 0.07500942390942392,
+          "recall": 0.5226666666666666,
+          "f1": 0.12690713448917781,
+          "stale_rate": 0.0,
+          "full_chain_recall": 0.422,
+          "final_hop_recall": 0.466,
+          "mean_retrieved_facts": 15.68,
+          "build_secs": 15.59085054199386
+        },
+        {
+          "name": "networkx_naive",
+          "label": "NetworkX property graph (naive BFS)",
+          "queries": 100,
+          "latency_ms": {
+            "mean": 350.4642217,
+            "p50": 76.693063,
+            "p95": 1146.42867325,
+            "p99": 1438.5859901700128
+          },
+          "tokens": {
+            "mean": 696.98,
+            "p50": 681.0,
+            "p95": 810.4
+          },
+          "precision": 0.04625,
+          "recall": 0.37,
+          "f1": 0.08222222222222221,
+          "stale_rate": 0.49,
+          "full_chain_recall": 0.24,
+          "final_hop_recall": 0.31,
+          "mean_retrieved_facts": 16.0,
+          "build_secs": 6.423572875006357
+        },
+        {
+          "name": "networkx_temporal",
+          "label": "NetworkX property graph (temporal filter)",
+          "queries": 100,
+          "latency_ms": {
+            "mean": 314.03829253,
+            "p50": 52.0796455,
+            "p95": 1376.5285375,
+            "p99": 1663.6716611600018
+          },
+          "tokens": {
+            "mean": 688.84,
+            "p50": 667.0,
+            "p95": 854.4499999999999
+          },
+          "precision": 0.08104166666666666,
+          "recall": 0.5633333333333334,
+          "f1": 0.135687552213868,
+          "stale_rate": 0.0,
+          "full_chain_recall": 0.49,
+          "final_hop_recall": 0.51,
+          "mean_retrieved_facts": 15.74,
+          "build_secs": 3.9133496250142343
+        },
+        {
+          "name": "vector_faiss_k5",
+          "label": "Flat vector (FAISS exact, k=5)",
+          "queries": 500,
+          "latency_ms": {
+            "mean": 7.708839248,
+            "p50": 6.154646,
+            "p95": 14.824253849999993,
+            "p99": 30.331688919999987
+          },
+          "tokens": {
+            "mean": 258.344,
+            "p50": 253.0,
+            "p95": 443.0999999999999
+          },
+          "precision": 0.00017786561264822133,
+          "recall": 0.002,
+          "f1": 0.0003266666666666667,
+          "stale_rate": 0.49959432494094896,
+          "full_chain_recall": 0.0,
+          "final_hop_recall": 0.0,
+          "mean_retrieved_facts": 12.58,
+          "k": 5,
+          "token_matched": false,
+          "build_secs": 0.5820856250065845
+        },
+        {
+          "name": "vector_faiss_k12",
+          "label": "Flat vector (FAISS exact, token-matched k=12)",
+          "queries": 500,
+          "latency_ms": {
+            "mean": 6.615340528,
+            "p50": 5.2069165,
+            "p95": 12.351956599999994,
+            "p99": 19.87950101
+          },
+          "tokens": {
+            "mean": 669.566,
+            "p50": 661.0,
+            "p95": 999.0
+          },
+          "precision": 7.272727272727273e-05,
+          "recall": 0.002,
+          "f1": 0.00014035087719298245,
+          "stale_rate": 0.5124461086387375,
+          "full_chain_recall": 0.0,
+          "final_hop_recall": 0.0,
+          "mean_retrieved_facts": 32.334,
+          "k": 12,
+          "token_matched": true,
+          "build_secs": 0.5820856250065845
+        }
+      ],
+      "parity": {
+        "hypergraph_vs_networkx_temporal_jaccard": 0.9894117647058823,
+        "note": "Both rank the same reachable, valid facts by cosine; values near 1.0 confirm identical retrieval semantics."
+      },
+      "networkx_queries": 100
+    }
+  ]
+}

@@ -1,14 +1,13 @@
-"""vLLM secondary KV tier over gRPC.
+"""KV block tier over gRPC with a vLLM-style store/load interface.
 
 Out-of-process counterpart of ``hypergraph_offloader.HypergraphKVOffloader``:
-vLLM's offloading connector hands evicted KV chunks to :meth:`submit_store`
-and asks for them back during prefix matching with :meth:`submit_load`.
+:meth:`submit_store` saves a KV chunk under its block hash and
+:meth:`submit_load` returns it, or ``None`` on a miss.
 
-    vllm serve <model> --kv-transfer-config '{
-      "kv_connector": "OffloadingConnector",
-      "secondary_tier_module": "hypergraph_client.kv_tier.HypergraphKVOffloadTierManager",
-      "secondary_tier_config": {"grpc_endpoint": "localhost:50051"}
-    }'
+Not yet loadable by vLLM: upstream ``vllm.v1.kv_offload.tiering`` exposes
+``SecondaryTierManager``, whose ``submit_store``/``submit_load`` take a
+``TransferJob``, while this class follows the byte-oriented interface in
+``docs/MyUnderstanding/Integration.txt``. Call it from your own code.
 """
 
 from __future__ import annotations

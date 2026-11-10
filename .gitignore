@@ -22,6 +22,8 @@ dist/
 # Evaluation and benchmark outputs
 /results/
 /logs/
+/build/
+/kaggle_output/
 .cache/
 
 # Local secrets
