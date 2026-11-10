@@ -199,6 +199,6 @@ Temporal Hypergraph Engine is licensed under the [Server Side Public License, ve
 
 The SSPL is not an OSI-approved open source license. This summary is for convenience only; the [license text](LICENSE) governs. For commercial or managed-service licensing, contact the maintainers.
 
-Versions 1.0.1 and earlier were published under `MIT OR Apache-2.0`, and copies obtained under those terms remain available under them.
+Version 2.0.0 is the first release under the SSPL. Versions 1.0.1 and earlier were published under `MIT OR Apache-2.0`, and copies obtained under those terms remain available under them.
 
-Contributions intentionally submitted for inclusion in this project are licensed under the SSPL-1.0.
+External contributions require a Contributor License Agreement; see [CONTRIBUTING.md](CONTRIBUTING.md#contributor-license-agreement-cla).

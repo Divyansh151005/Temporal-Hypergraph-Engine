@@ -6,7 +6,7 @@
 - On a synthetic multi-hop benchmark of 1,000 questions about past dates, it returned 0% stale facts (naive graph RAG: 45.1%, vector RAG: 52.5% to 52.9%) and 7.2x the fact recall of vector RAG at the same context-token budget, with a 0.53 ms p50 retrieval latency including the Python boundary.
 - Readers never take a lock. With 8 readers and a writer inserting as fast as it can, readers sustain 14.8K traversals/s. The same workload behind an `RwLock` manages 998/s.
 
-Python and TypeScript SDKs are at v1.0.1. Everything below is reproducible from the repo, and the limitations are listed next to the claims.
+The engine and the Python and TypeScript SDKs are at v2.0.0, released under the SSPL (more on that at the end). Everything below is reproducible from the repo, and the limitations are listed next to the claims.
 
 ---
 
@@ -215,3 +215,9 @@ python -m hypergraph_evaluation.competitor_bench \
 The full command list is in [`docs/GTM_Whitepaper_Metrics.md`](GTM_Whitepaper_Metrics.md#reproduce).
 
 We would especially like criticism of the benchmark methodology. If you think a baseline is unfair, or you know of a workload where this design falls over, please open an issue or reply here. We would rather hear it now.
+
+## 7. A note on the license (SSPL)
+
+I am a solo developer who built this entirely on my laptop in my student hostel. To ensure I can actually afford to maintain this long-term and eventually launch a managed cloud service without a massive cloud vendor absorbing the infrastructure layer, v2.0.0 is licensed under the SSPL. You can use it, modify it, and run it for free in your own applications—you just can't offer it as a competing managed database-as-a-service.
+
+Precisely: Section 13 of the SSPL lets anyone offer the engine as a service only if they release the source of their entire service stack under the SSPL, which in practice rules out a closed managed offering. The SSPL is not OSI-approved, and v1.0.1 and earlier remain available under `MIT OR Apache-2.0`. The full summary is in the [README](../README.md#license).

@@ -25,7 +25,7 @@ crate fails with "no matching package named ...", wait a minute and retry.
 ## Steps
 
 ```bash
-git checkout v1.0.0            # the release tag, with a clean tree
+git checkout v2.0.0            # the release tag, with a clean tree
 cargo login                    # token from https://crates.io/settings/tokens
 
 for crate in temporal-math engine-core vllm-kv-store grpc-server; do
