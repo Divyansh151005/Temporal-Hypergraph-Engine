@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Interactive demo
+    url: https://temporal-hypergraph-web.onrender.com/
+    about: Try point-in-time traversal in the browser before filing an issue.
+  - name: Benchmarks and methodology
+    url: https://github.com/Divyansh151005/Temporal-Hypergraph-Engine/blob/main/docs/GTM_Whitepaper_Metrics.md
+    about: Full benchmark tables, methodology and known limitations.

@@ -1,0 +1,37 @@
+name: Benchmark dispute
+description: You think a published number is wrong, unfair or not reproducible.
+labels: ["benchmark", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Criticism of the methodology is welcome. The published numbers and their methodology are in [docs/GTM_Whitepaper_Metrics.md](https://github.com/Divyansh151005/Temporal-Hypergraph-Engine/blob/main/docs/GTM_Whitepaper_Metrics.md).
+  - type: input
+    id: claim
+    attributes:
+      label: Which number are you disputing?
+      placeholder: "README, Benchmarks section 1: 0.530 ms p50 for the hypergraph"
+    validations:
+      required: true
+  - type: textarea
+    id: concern
+    attributes:
+      label: What do you think is wrong?
+      description: For example an unfair baseline, a missing workload, or a result you could not reproduce.
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Exact command you ran
+      render: bash
+  - type: textarea
+    id: output
+    attributes:
+      label: JSON output or results
+      render: json
+  - type: input
+    id: hardware
+    attributes:
+      label: Hardware
+      placeholder: "Apple M3, 8 cores, 16 GiB RAM"

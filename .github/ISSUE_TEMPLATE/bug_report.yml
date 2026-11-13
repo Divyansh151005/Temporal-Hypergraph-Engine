@@ -1,0 +1,73 @@
+name: Bug report
+description: Something is broken, crashes, loses data or returns wrong results.
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Data loss, stale facts returned by a temporal traversal, KV blocks restored incorrectly and memory leaks are treated as the highest priority.
+        Please report security vulnerabilities privately to the maintainer rather than in a public issue.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: "`hypergraph-server --version`, or the package version from `pip show` / `npm ls`."
+      placeholder: "2.0.1"
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How are you running the engine?
+      options:
+        - Docker image (ghcr.io/divyansh151005/temporal-hypergraph-server)
+        - In-process Python (hypergraph-engine-native)
+        - Python gRPC client (hypergraph-client, LangChain or LlamaIndex)
+        - TypeScript SDK (@temporal-hypergraph/sdk)
+        - KV offloader (hypergraph-offloader) with vLLM or PyTorch
+        - Built from source
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected component (best guess)
+      options:
+        - Not sure
+        - Traversal or temporal filtering
+        - Write-ahead log, checkpoints or recovery
+        - Time-decay scoring
+        - gRPC server
+        - KV-cache block store or offloader
+        - Python SDK or integrations
+        - TypeScript SDK
+        - Website
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Platform
+      description: OS, CPU architecture, and GPU model plus CUDA version if a GPU is involved.
+      placeholder: "Ubuntu 22.04, x86_64, Tesla T4 / CUDA 12.4"
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal reproduction
+      description: The smallest code or command sequence that triggers the bug.
+      render: python
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected versus actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or stack trace
+      render: text
