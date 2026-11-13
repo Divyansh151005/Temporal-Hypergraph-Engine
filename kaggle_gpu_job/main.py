@@ -14,9 +14,9 @@ REPO_TAG = "v1.0.1"
 # Outside /kaggle/working so the clone and Rust target/ are not saved as kernel output.
 REPO_DIR = "/tmp/Temporal-Hypergraph-Engine"
 
-# scripts/run_kaggle_test.sh replaces these lines with the source of
-# run_vllm_test.py and a base64 tar.gz of the repo (the GitHub repo is private).
-TEST_SOURCE = None
+# scripts/kaggle_job.sh replaces these lines with {filename: source} for the
+# job's other *.py files and a base64 tar.gz of the repo (the GitHub repo is private).
+EMBEDDED_FILES = None
 SOURCE_ARCHIVE = None
 
 
@@ -53,9 +53,9 @@ def main():
     run(pip + ["--no-deps", "-e", os.path.join(REPO_DIR, "python")])
 
     test_path = os.path.join(REPO_DIR, "run_vllm_test.py")
-    if TEST_SOURCE is not None:
+    if EMBEDDED_FILES is not None:
         with open(test_path, "w") as f:
-            f.write(TEST_SOURCE)
+            f.write(EMBEDDED_FILES["run_vllm_test.py"])
     else:
         shutil.copy(os.path.join(os.path.dirname(os.path.abspath(__file__)), "run_vllm_test.py"), test_path)
 

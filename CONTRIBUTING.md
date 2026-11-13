@@ -30,7 +30,7 @@ Changes to the WAL or the concurrency code in `engine-core` are also checked in 
 
 ## Contributor License Agreement (CLA)
 
-To protect the commercial viability of the project, all external contributors must agree to a CLA assigning the copyright of their contributions to the core maintainer. This allows the project to maintain its SSPL license and future commercial offerings.
+All external contributors must agree to a CLA. You retain the copyright to your contribution, but you grant the project a perpetual, irrevocable license to use, modify, distribute, and sublicense the contribution. This grant exists strictly so the project can maintain its dual-licensing model (SSPL-1.0 alongside commercial licenses) and stay commercially viable in the future.
 
 The project uses [cla-assistant](https://cla-assistant.io/). When you open your first pull request, it automatically comments with a link to the CLA; sign it once with your GitHub account and the check passes for that and all future pull requests. Pull requests from external contributors cannot be merged until the CLA has been signed.
 
