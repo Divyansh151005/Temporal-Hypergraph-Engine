@@ -2,6 +2,8 @@
 
 # ⚡ Temporal Hypergraph Engine
 
+**🌐 [temporal-hypergraph-web.onrender.com](https://temporal-hypergraph-web.onrender.com/)**
+
 ### Time-aware memory for LLMs that never serves a stale fact.
 
 **A lock-free, SIMD-accelerated temporal hypergraph database written in Rust,<br/>with a zero-copy KV-cache block store for vLLM.**
@@ -16,7 +18,7 @@
 [![Rust 2021](https://img.shields.io/badge/rust-2021%20edition-orange.svg?logo=rust)](https://doc.rust-lang.org/edition-guide/rust-2021/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%E2%80%933.13-3776AB.svg?logo=python&logoColor=white)](https://pypi.org/project/hypergraph-engine-native/)
 
-[**Quickstart**](#-quickstart) · [**Benchmarks**](#-benchmarks) · [**Architecture**](#-architecture) · [**Whitepaper**](docs/GTM_Whitepaper_Metrics.md) · [**Docs**](#-documentation) · [**License**](#-licensing-and-commercial-use)
+[**Live demo**](https://temporal-hypergraph-web.onrender.com/) · [**Try it**](#-try-it) · [**Quickstart**](#-quickstart) · [**Benchmarks**](#-benchmarks) · [**Architecture**](#-architecture) · [**Whitepaper**](docs/GTM_Whitepaper_Metrics.md) · [**Docs**](#-documentation) · [**License**](#-licensing-and-commercial-use)
 
 </div>
 
@@ -305,6 +307,12 @@ flowchart LR
 ```
 
 </details>
+
+## 🎮 Try it
+
+The fastest way to see the engine is the **[interactive demo on the website](https://temporal-hypergraph-web.onrender.com/)**. Its Transit Diagram draws facts as a transit map; scrub the timeline to watch a point-in-time traversal redraw as superseded facts drop out. No install needed.
+
+To run it yourself, follow the Quickstart below.
 
 ## 🚀 Quickstart
 
